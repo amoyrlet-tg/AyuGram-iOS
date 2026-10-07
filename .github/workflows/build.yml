@@ -49,6 +49,14 @@ jobs:
               f.write("\n")
           PYCONF
 
+      - name: Restore Bazel cache
+        uses: actions/cache@v4
+        with:
+          path: /Users/Shared/telegram-bazel-cache
+          key: telegram-bazel-${{ runner.os }}-${{ hashFiles('versions.json') }}-${{ github.sha }}
+          restore-keys: |
+            telegram-bazel-${{ runner.os }}-${{ hashFiles('versions.json') }}-
+
       - name: Build the App
         run: |
           set -x
@@ -72,6 +80,7 @@ jobs:
 
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
           python3 -u build-system/Make/Make.py \
+  --cacheDir="/Users/Shared/telegram-bazel-cache" \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
             --configurationPath="build-system/appstore-configuration.json" \
