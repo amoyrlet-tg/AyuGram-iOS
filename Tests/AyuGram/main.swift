@@ -9,6 +9,12 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) {
 var normal = AyuPreferences()
 normal.autoOffline = false
 check(normal.autoDeleteDelay == 180, "Default delay must be three minutes")
+check(!normal.sendOnlineStatus, "Online status must default to off")
+check(normal.sendActivityStatuses, "Activity statuses must default to on")
+check(normal.dontReadMessages && normal.dontReadStories, "Read protection must default to on")
+normal.dontReadMessages = false
+normal.dontReadStories = false
+normal.dontSendOnline = false
 check(AyuPrivacyPolicy.passiveOnline(foreground: true, preferences: normal), "Normal presence must still work")
 check(!AyuPrivacyPolicy.passiveOnline(foreground: false, preferences: normal), "Background cannot activate presence")
 var ghost = normal
@@ -22,7 +28,7 @@ for method in ["messages.getHistory", "messages.getDialogs", "users.getFullUser"
 }
 for method in ["messages.readHistory", "channels.readHistory", "messages.readDiscussion", "messages.readMessageContents", "channels.readMessageContents", "messages.readEncryptedHistory", "messages.readSavedHistory", "messages.readMentions", "messages.readReactions"] {
     check(AyuPrivacyPolicy.suppress(method: method, preferences: ghost), "Ghost must block read receipt: \(method)")
-    check(!AyuPrivacyPolicy.suppress(method: method, preferences: ghost, explicitRead: true), "Explicit reads must remain possible: \(method)")
+    check(AyuPrivacyPolicy.suppress(method: method, preferences: ghost, explicitRead: true), "Explicit reads must not bypass Ghost Mode: \(method)")
     check(!AyuPrivacyPolicy.suppress(method: method, preferences: normal), "Normal reads must remain possible")
 }
 for method in ["stories.readStories", "stories.incrementStoryViews", "messages.setTyping", "messages.setEncryptedTyping"] {
