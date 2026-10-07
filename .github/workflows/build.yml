@@ -2,112 +2,97 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
-
+    branches: [master]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ayugram-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SOURCE_DIR: /Users/Shared/telegram-ios
+  BAZEL_CACHE: /Users/Shared/telegram-bazel-cache
 
 jobs:
   build:
     runs-on: macos-26
-
+    timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
-          submodules: 'recursive'
-          fetch-depth: '0'
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Set active Xcode path
-        run: |
-          XCODE_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["xcode"]);')
-          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
-
-      - name: Create canonical source directory
-        run: |
-          set -x
-          sudo mkdir -p /Users/Shared
-          cp -R $GITHUB_WORKSPACE /Users/Shared/
-          mv /Users/Shared/$(basename $GITHUB_WORKSPACE) /Users/Shared/telegram-ios
-
-      - name: Configure Telegram API
+      - name: Configure Telegram API before copying sources
         env:
           TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
           TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
         run: |
-          python3 - <<'PYCONF'
-          import json, os
+          python3 build-system/Make/Sideload.py \
+            --template build-system/appstore-configuration.json \
+            --output build-input/sideload-configuration.json
+          python3 -m unittest discover -s Tests/AyuGram -p 'test_*.py'
 
-          p = "build-system/appstore-configuration.json"
+      - name: Set active Xcode path
+        run: |
+          XCODE_VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          xcodebuild -version
+          swiftc -warnings-as-errors submodules/TelegramCore/Sources/AyuGram/AyuPrivacyPolicy.swift Tests/AyuGram/main.swift -o "$RUNNER_TEMP/ayu-privacy-tests"
+          "$RUNNER_TEMP/ayu-privacy-tests"
 
-          with open(p) as f:
-              d = json.load(f)
-
-          d["api_id"] = os.environ["TELEGRAM_API_ID"]
-          d["api_hash"] = os.environ["TELEGRAM_API_HASH"]
-
-          with open(p, "w") as f:
-              json.dump(d, f, indent="\t")
-              f.write("\n")
-          PYCONF
+      - name: Create canonical source directory
+        run: |
+          mkdir -p "$SOURCE_DIR"
+          cp -R "$GITHUB_WORKSPACE/." "$SOURCE_DIR/"
+          cmp build-input/sideload-configuration.json "$SOURCE_DIR/build-input/sideload-configuration.json"
 
       - name: Restore Bazel cache
         id: bazel-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: /Users/Shared/telegram-bazel-cache
-          key: telegram-bazel-${{ runner.os }}-${{ hashFiles('versions.json') }}-${{ github.sha }}
+          key: telegram-bazel-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('versions.json') }}-${{ github.sha }}-${{ github.run_attempt }}
           restore-keys: |
+            telegram-bazel-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('versions.json') }}-
             telegram-bazel-${{ runner.os }}-${{ hashFiles('versions.json') }}-
 
-      - name: Build the App
+      - name: Build the App for SideStore
+        working-directory: /Users/Shared/telegram-ios
         run: |
-          set -x
-
-          # source code paths are included in the final binary, so we need to make them stable across builds
-          SOURCE_DIR=/Users/Shared/telegram-ios
-
-          # use canonical bazel root
-          BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
-
-          cd $SOURCE_DIR
-
-          BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
-
-          export APP_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["app"]);')
-          export COMMIT_COUNT=$(git rev-list --count HEAD)
-          export COMMIT_COUNT="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
-          export BUILD_NUMBER="$COMMIT_COUNT"
-          echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
-          echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
-
-          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          BUILD_NUMBER=$(( $(git rev-list --count HEAD) + $(cat build_number_offset) ))
           python3 -u build-system/Make/Make.py \
-            --cacheDir="/Users/Shared/telegram-bazel-cache" \
-            --bazelUserRoot="$BAZEL_USER_ROOT" \
+            --cacheDir="$BAZEL_CACHE" \
+            --bazelUserRoot=/private/var/tmp/_bazel_containerhost \
             build \
-            --configurationPath="build-system/appstore-configuration.json" \
-            --codesigningInformationPath=build-system/fake-codesigning \
+            --configurationPath=build-input/sideload-configuration.json \
+            --sideload \
             --configuration=release_arm64 \
             --buildNumber="$BUILD_NUMBER"
+          python3 build-system/Make/VerifySideload.py \
+            --ipa bazel-bin/Telegram/Telegram.ipa \
+            --configuration build-input/sideload-configuration.json \
+            --variables build-input/configuration-repository/variables.bzl
+          mkdir -p build/artifacts
+          cp bazel-bin/Telegram/Telegram.ipa build/artifacts/AyuGram-SideStore.ipa
+          shasum -a 256 build/artifacts/AyuGram-SideStore.ipa > build/artifacts/SHA256SUMS
+          printf 'SideStore signs this IPA during installation with your Apple ID. iCloud, Siri, push entitlement and extensions are disabled.\n' > build/artifacts/INSTALL.txt
 
-          # collect ipa
-          OUTPUT_PATH="build/artifacts"
-          rm -rf "$OUTPUT_PATH"
-          mkdir -p "$OUTPUT_PATH"
-
-          test -f bazel-bin/Telegram/Telegram.ipa
-          cp bazel-bin/Telegram/Telegram.ipa "$OUTPUT_PATH/Telegram.ipa"
-
-      - name: Save Bazel cache
-        if: always()
-        uses: actions/cache/save@v4
+      - name: Save Bazel cache even if compilation fails
+        if: ${{ always() && steps.bazel-cache.outcome == 'success' && steps.bazel-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
         with:
           path: /Users/Shared/telegram-bazel-cache
-          key: telegram-bazel-${{ runner.os }}-${{ hashFiles('versions.json') }}-${{ github.sha }}
+          key: ${{ steps.bazel-cache.outputs.cache-primary-key }}
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: AyuGram-iOS
-          path: /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
+          name: AyuGram-SideStore-${{ github.run_number }}
+          path: /Users/Shared/telegram-ios/build/artifacts/
           if-no-files-found: error
-
+          retention-days: 14

@@ -16,6 +16,7 @@ from BuildConfiguration import CodesigningSource, GitCodesigningSource, Director
 import RemoteBuild
 import TartBuild
 import GenerateProfiles
+from Sideload import prepare_rules_apple
 
 
 class ResolvedCodesigningData:
@@ -46,6 +47,7 @@ class BazelCommandLine:
         self.show_actions = False
         self.enable_sandbox = False
         self.disable_provisioning_profiles = False
+        self.sideload = False
         self.profile_swift = False
         self.embed_watch_app = False
         self.watch_api_id = None
@@ -301,7 +303,8 @@ class BazelCommandLine:
 
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
-        combined_arguments += ['--//Telegram:disableExtensions']
+        if self.sideload:
+            combined_arguments += ['--//Telegram:disableExtensions', '--features=apple.sideload', '--features=disable_legacy_signing']
         combined_arguments += self.get_define_arguments()
         combined_arguments += self.get_additional_build_arguments()
 
@@ -511,16 +514,20 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
         shutil.rmtree(provisioning_path)
     os.makedirs(provisioning_path, exist_ok=True)
 
-    codesigning_data = resolve_codesigning(
-        arguments=arguments,
-        base_path=base_path,
-        build_configuration=build_configuration,
-        provisioning_profiles_path=provisioning_path,
-        additional_codesigning_output_path=additional_codesigning_output_path
-    )
-    if codesigning_data.aps_environment is None:
-        print('No aps-environment entitlement found; disabling push entitlement for sideload build')
-        codesigning_data.aps_environment = ""
+    if getattr(arguments, 'sideload', False):
+        if build_configuration.enable_icloud or build_configuration.enable_siri:
+            raise ValueError('Sideload configuration must disable iCloud and Siri')
+        codesigning_data = ResolvedCodesigningData(aps_environment="", use_xcode_managed_codesigning=False)
+    else:
+        codesigning_data = resolve_codesigning(
+            arguments=arguments,
+            base_path=base_path,
+            build_configuration=build_configuration,
+            provisioning_profiles_path=provisioning_path,
+            additional_codesigning_output_path=additional_codesigning_output_path
+        )
+        if codesigning_data.aps_environment is None:
+            raise ValueError('Could not find a valid aps-environment entitlement in the provided provisioning profiles')
 
     if bazel_command_line is not None:
         build_configuration.write_to_variables_file(bazel_path=bazel_command_line.bazel, use_xcode_managed_codesigning=codesigning_data.use_xcode_managed_codesigning, aps_environment=codesigning_data.aps_environment, path=configuration_repository_path + '/variables.bzl')
@@ -699,8 +706,12 @@ def build(bazel, arguments):
     bazel_command_line.set_show_actions(arguments.showActions)
     bazel_command_line.set_enable_sandbox(arguments.sandbox)
 
-    # Sideload build: SideStore will provision/sign the final IPA.
-    bazel_command_line.set_disable_provisioning_profiles()
+    if arguments.sideload:
+        if arguments.embedWatchApp:
+            raise ValueError('Sideload mode does not embed a watch app')
+        prepare_rules_apple(os.getcwd())
+        bazel_command_line.sideload = True
+        bazel_command_line.set_disable_provisioning_profiles()
 
     bazel_command_line.set_profile_swift(arguments.profileSwift)
 
@@ -839,6 +850,10 @@ def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
     )
 
     codesigning_group = current_parser.add_mutually_exclusive_group(required=True)
+    codesigning_group.add_argument(
+        '--sideload', action='store_true',
+        help='Build an unsigned device IPA for subsequent signing with SideStore or AltStore.'
+    )
     codesigning_group.add_argument(
         '--gitCodesigningRepository',
         help='''
