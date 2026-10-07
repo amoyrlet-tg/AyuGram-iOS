@@ -50,7 +50,8 @@ jobs:
           PYCONF
 
       - name: Restore Bazel cache
-        uses: actions/cache@v4
+        id: bazel-cache
+        uses: actions/cache/restore@v4
         with:
           path: /Users/Shared/telegram-bazel-cache
           key: telegram-bazel-${{ runner.os }}-${{ hashFiles('versions.json') }}-${{ github.sha }}
@@ -95,6 +96,13 @@ jobs:
 
           test -f bazel-bin/Telegram/Telegram.ipa
           cp bazel-bin/Telegram/Telegram.ipa "$OUTPUT_PATH/Telegram.ipa"
+
+      - name: Save Bazel cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: /Users/Shared/telegram-bazel-cache
+          key: telegram-bazel-${{ runner.os }}-${{ hashFiles('versions.json') }}-${{ github.sha }}
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
