@@ -19,6 +19,8 @@ public struct AyuMessageRevision: Codable {
     public let deleted: Bool
     public let text: String
     public let payload: Data
+    public let senderId: Int64?
+    public let mediaSummary: String?
 
     public var id: MessageId {
         MessageId(peerId: PeerId(self.peerId), namespace: self.namespace, id: self.messageId)
@@ -72,7 +74,8 @@ public final class AyuMessageArchive {
         encoder.encodeObjectArrayWithEncoder(message.media, forKey: "media", encoder: { media, encoder in
             media.encode(encoder)
         })
-        let revision = AyuMessageRevision(peerId: message.id.peerId.toInt64(), namespace: message.id.namespace, messageId: message.id.id, timestamp: message.timestamp, capturedAt: Int32(Date().timeIntervalSince1970), deleted: deleted, text: message.text, payload: encoder.makeData())
+        let mediaSummary = message.media.isEmpty ? nil : message.media.map { String(describing: type(of: $0)) }.joined(separator: ", ")
+        let revision = AyuMessageRevision(peerId: message.id.peerId.toInt64(), namespace: message.id.namespace, messageId: message.id.id, timestamp: message.timestamp, capturedAt: Int32(Date().timeIntervalSince1970), deleted: deleted, text: message.text, payload: encoder.makeData(), senderId: message.author?.id.toInt64(), mediaSummary: mediaSummary)
         var revisions = self.load(message.id)
         if let last = revisions.last, last.text == revision.text && last.payload == revision.payload && last.deleted == deleted { return true }
         revisions.append(revision)
@@ -123,6 +126,15 @@ public final class AyuMessageArchive {
                 Logger.shared.log("AyuGram", "Unable to clear history: \(error)")
                 return false
             }
+        }
+    }
+
+    public func storageSize() -> Int64 {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        let files = (try? FileManager.default.contentsOfDirectory(at: self.directory, includingPropertiesForKeys: [.fileSizeKey])) ?? []
+        return files.reduce(0) { result, url in
+            result + Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
         }
     }
 }

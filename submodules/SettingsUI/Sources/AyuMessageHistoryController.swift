@@ -32,10 +32,12 @@ public func ayuMessageHistoryController(context: AccountContext, message: Engine
         formatter.timeStyle = .medium
         var entries: [AyuHistoryEntry] = []
         let deleted = message.attributes.contains(where: { $0 is AyuDeletedMessageAttribute })
-        entries.append(AyuHistoryEntry(stableId: 0, text: (deleted ? "Deleted message" : "Current message") + "\n\n" + (message.text.isEmpty ? "[Media message]" : message.text), theme: presentationData.theme))
-        for (index, revision) in revisions.reversed().enumerated() {
+        entries.append(AyuHistoryEntry(stableId: 0, text: (deleted ? "Deleted" : "Current") + "\n" + formatter.string(from: Date(timeIntervalSince1970: TimeInterval(message.timestamp))) + "\n\n" + (message.text.isEmpty ? "[Media message]" : message.text), theme: presentationData.theme))
+        for (index, revision) in revisions.enumerated() {
             let date = formatter.string(from: Date(timeIntervalSince1970: TimeInterval(revision.capturedAt)))
-            entries.append(AyuHistoryEntry(stableId: Int32(index + 1), text: (revision.deleted ? "Deleted · " : "Before edit · ") + date + "\n\n" + (revision.text.isEmpty ? "[Media message]" : revision.text), theme: presentationData.theme))
+            let kind = revision.deleted ? "Deleted" : (index == 0 ? "Original" : "Edited")
+            let details = [revision.mediaSummary, revision.senderId.map { "Sender \($0)" }].compactMap { $0 }.joined(separator: " · ")
+            entries.append(AyuHistoryEntry(stableId: Int32(index + 1), text: kind + "\n" + date + (details.isEmpty ? "" : "\n" + details) + "\n\n" + (revision.text.isEmpty ? "[Media message]" : revision.text), theme: presentationData.theme))
         }
         if revisions.isEmpty {
             entries.append(AyuHistoryEntry(stableId: 1, text: "No earlier versions saved on this device.", theme: presentationData.theme))

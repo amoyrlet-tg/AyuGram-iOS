@@ -33,7 +33,7 @@ private final class AccountPresenceManagerImpl {
             let (foreground, preferences) = value
             let changed = self.preferences != preferences
             self.preferences = preferences
-            let online = AyuPrivacyPolicy.passiveOnline(foreground: foreground, preferences: preferences)
+            let online = foreground && AyuPresencePolicy.allowsOnlinePresence(preferences)
             if self.wasOnline != online || changed || preferences.suppressOnline {
                 self.wasOnline = online
                 self.updatePresence(online)
@@ -42,7 +42,7 @@ private final class AccountPresenceManagerImpl {
         self.activityDisposable = (network.ayuActivity.ended.signal()
         |> deliverOn(self.queue)).start(next: { [weak self] _ in
             guard let self = self else { return }
-            if self.network.ayuActivity.isIdle && AyuPrivacyPolicy.returnOfflineAfterAction(preferences: self.preferences) {
+            if self.network.ayuActivity.isIdle && AyuPresencePolicy.shouldReturnOffline(self.preferences) {
                 self.wasOnline = false
                 self.updatePresence(false)
             }
@@ -58,7 +58,7 @@ private final class AccountPresenceManagerImpl {
     }
     
     private func updatePresence(_ requestedOnline: Bool) {
-        let isOnline = requestedOnline && !self.network.ayuPreferences.current.suppressOnline
+        let isOnline = requestedOnline && AyuPresencePolicy.allowsOnlinePresence(self.network.ayuPreferences.current)
         let request: Signal<Api.Bool, MTRpcError>
         if isOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
