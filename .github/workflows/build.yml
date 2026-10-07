@@ -78,9 +78,13 @@ jobs:
             --configuration build-input/sideload-configuration.json \
             --variables build-input/configuration-repository/variables.bzl
           mkdir -p build/artifacts
-          cp bazel-bin/Telegram/Telegram.ipa build/artifacts/AyuGram-SideStore.ipa
+          python3 build-system/Make/PackageSideload.py \
+            --ipa bazel-bin/Telegram/Telegram.ipa \
+            --output build/artifacts/AyuGram-SideStore.ipa \
+            --entitlements bazel-bin/Telegram/TelegramEntitlements.entitlements \
+            --configuration build-input/sideload-configuration.json
           shasum -a 256 build/artifacts/AyuGram-SideStore.ipa > build/artifacts/SHA256SUMS
-          printf 'SideStore signs this IPA during installation with your Apple ID. iCloud, Siri, push entitlement and extensions are disabled.\n' > build/artifacts/INSTALL.txt
+          printf 'This IPA has an ad-hoc signature preserving app-group entitlements. SideStore signs it during installation with your Apple ID. iCloud, Siri, push entitlement and extensions are disabled.\n' > build/artifacts/INSTALL.txt
 
       - name: Save Bazel cache even if compilation fails
         if: ${{ always() && steps.bazel-cache.outcome == 'success' && steps.bazel-cache.outputs.cache-hit != 'true' }}

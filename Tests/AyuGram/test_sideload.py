@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'build-system/Make'))
 from Sideload import configuration_for_sideload, prepare_rules_apple
 from VerifySideload import verify
+from PackageSideload import validate_entitlements
 import Make
 
 
@@ -71,6 +72,15 @@ class SideloadTests(unittest.TestCase):
         prepare_rules_apple(self.root)
         self.assertEqual(path.read_text(), first)
         self.assertIn('"apple.sideload" not in features', first)
+
+    def test_packaging_keeps_app_group_and_rejects_cloud_entitlements(self):
+        entitlements = {'com.apple.security.application-groups': ['group.' + self.config['bundle_id']]}
+        validate_entitlements(entitlements, self.config['bundle_id'])
+        with self.assertRaises(ValueError):
+            validate_entitlements({}, self.config['bundle_id'])
+        for key in ['com.apple.developer.icloud-services', 'aps-environment', 'com.apple.developer.siri']:
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                validate_entitlements(dict(entitlements, **{key: True}), self.config['bundle_id'])
 
     def test_ipa_rejects_stale_api_hash_and_cloudkit(self):
         variables = self.root / 'variables.bzl'
