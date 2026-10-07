@@ -50,7 +50,7 @@ class SideloadTests(unittest.TestCase):
             Make.resolve_configuration(str(self.root), None, SimpleNamespace(configurationPath=str(self.config_path), sideload=False), None)
 
     def test_sideload_flags_do_not_affect_normal_builds(self):
-        with patch.object(Make, 'BuildEnvironment'), patch.object(Make, 'call_executable') as call:
+        with patch.object(Make, 'BuildEnvironment'), patch.object(Make, 'call_executable') as call, patch.object(Make.shutil, 'copyfile') as copy:
             command = Make.BazelCommandLine('bazel', False, False, None)
             command.build_environment.bazel_path = 'bazel'
             command.set_configuration('release_arm64')
@@ -60,7 +60,10 @@ class SideloadTests(unittest.TestCase):
             command.sideload = True
             command.set_disable_provisioning_profiles()
             command.invoke_build()
-            self.assertIn('//Telegram:TelegramEntitlements', call.call_args.args[0])
+            self.assertNotIn('//Telegram:TelegramEntitlements', call.call_args.args[0])
+            self.assertIn('//Telegram:TelegramEntitlements', call.call_args_list[-2].args[0])
+            self.assertNotIn('Telegram/Telegram', call.call_args_list[-2].args[0])
+            copy.assert_called_once_with('bazel-bin/Telegram/TelegramEntitlements.entitlements', 'build-input/sideload.entitlements')
             for flag in ['--//Telegram:disableProvisioningProfiles', '--//Telegram:disableExtensions', '--features=apple.sideload', '--features=disable_legacy_signing']:
                 self.assertIn(flag, call.call_args.args[0])
 

@@ -289,10 +289,6 @@ class BazelCommandLine:
             combined_arguments += [self.custom_target]
         else:
             combined_arguments += ['Telegram/Telegram']
-            if self.sideload:
-                # Packaging needs this top-level output even when signing is
-                # disabled and the app does not materialize its entitlements.
-                combined_arguments += ['//Telegram:TelegramEntitlements']
 
         if self.continue_on_error:
             combined_arguments += ['--keep_going']
@@ -325,6 +321,17 @@ class BazelCommandLine:
         combined_arguments += self.configuration_args
         if self.profile_swift:
             combined_arguments += ['--config=swift_profile']
+
+        if self.sideload and self.custom_target is None:
+            # Build separately: the app's transition and this plain rule use
+            # different output directories, making bazel-bin ambiguous when
+            # both are requested together. Save the plist before the app build
+            # changes bazel-bin to its own configuration.
+            entitlements_arguments = combined_arguments.copy()
+            entitlements_arguments[entitlements_arguments.index('Telegram/Telegram')] = '//Telegram:TelegramEntitlements'
+            call_executable(entitlements_arguments)
+            os.makedirs('build-input', exist_ok=True)
+            shutil.copyfile('bazel-bin/Telegram/TelegramEntitlements.entitlements', 'build-input/sideload.entitlements')
 
         print('TelegramBuild: running')
         print(subprocess.list2cmdline(combined_arguments))
