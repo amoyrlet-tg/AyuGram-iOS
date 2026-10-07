@@ -301,6 +301,7 @@ class BazelCommandLine:
 
         combined_arguments += self.common_args
         combined_arguments += self.common_build_args
+        combined_arguments += ['--//Telegram:disableExtensions']
         combined_arguments += self.get_define_arguments()
         combined_arguments += self.get_additional_build_arguments()
 
