@@ -80,7 +80,7 @@ jobs:
 
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
           python3 -u build-system/Make/Make.py \
-  --cacheDir="/Users/Shared/telegram-bazel-cache" \
+            --cacheDir="/Users/Shared/telegram-bazel-cache" \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
             --configurationPath="build-system/appstore-configuration.json" \
