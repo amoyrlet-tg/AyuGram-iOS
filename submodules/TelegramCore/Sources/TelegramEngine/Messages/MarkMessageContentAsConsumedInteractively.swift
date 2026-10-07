@@ -3,7 +3,7 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Void, NoError> {
+func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if let message = transaction.getMessage(messageId), message.flags.contains(.Incoming) {
             var updateMessage = false
@@ -28,7 +28,7 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                                 }
                                 if let layer = layer {
                                     var globallyUniqueIds: [Int64] = []
-                                    if let globallyUniqueId = message.globallyUniqueId {
+                                    if !network.ayuPreferences.current.suppressReads, let globallyUniqueId = message.globallyUniqueId {
                                         globallyUniqueIds.append(globallyUniqueId)
                                         let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: SecretChatOutgoingOperationContents.readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: globallyUniqueIds), state: state)
                                         if updatedState != state {
@@ -72,7 +72,7 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                                 }
                             }
                             
-                            if let state = state, let layer = layer, let globallyUniqueId = message.globallyUniqueId {
+                            if !network.ayuPreferences.current.suppressReads, let state = state, let layer = layer, let globallyUniqueId = message.globallyUniqueId {
                                 let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: [globallyUniqueId]), state: state)
                                 if updatedState != state {
                                     transaction.setPeerChatState(messageId.peerId, state: updatedState)
@@ -103,7 +103,7 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                                 }
                             }
                             
-                            if let state = state, let layer = layer, let globallyUniqueId = message.globallyUniqueId {
+                            if !network.ayuPreferences.current.suppressReads, let state = state, let layer = layer, let globallyUniqueId = message.globallyUniqueId {
                                 let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: messageId.peerId, operation: .readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: [globallyUniqueId]), state: state)
                                 if updatedState != state {
                                     transaction.setPeerChatState(messageId.peerId, state: updatedState)

@@ -1239,6 +1239,7 @@ public class Account {
     public let hiddenStorySubscriptionsContext: StorySubscriptionsContext?
     
     public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool, isSupportUser: Bool) {
+        network.ayuPreferences = AyuPreferencesStore(mediaBoxPath: postbox.mediaBox.basePath)
         self.accountManager = accountManager
         self.id = id
         self.basePath = basePath
@@ -1418,6 +1419,12 @@ public class Account {
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: true).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: false).start())
+        self.managedOperationsDisposable.add(network.ayuReadStateUpdates.signal().start(next: { [weak stateManager = self.stateManager] pts, count in
+            stateManager?.addUpdateGroups([.updatePts(pts: pts, ptsCount: count)])
+        }))
+        if !supplementary {
+            self.managedOperationsDisposable.add(managedAyuAutoDelete(postbox: postbox, network: network, stateManager: self.stateManager).start())
+        }
         self.managedOperationsDisposable.add(managedAutoexpireStoryOperations(network: self.network, postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedPeerTimestampAttributeOperations(network: self.network, postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedSynchronizeViewStoriesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())

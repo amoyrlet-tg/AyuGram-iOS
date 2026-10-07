@@ -689,6 +689,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     open func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         self.item = item
+        self.alpha = item.content.firstMessage.attributes.contains(where: { $0 is AyuDeletedMessageAttribute }) ? 0.5 : 1.0
     }
     
     open func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {

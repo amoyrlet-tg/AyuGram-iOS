@@ -216,11 +216,11 @@ func _internal_markForumThreadAsReadInteractively(transaction: Transaction, netw
         
         if peer.isForum {
             if let inputPeer = apiInputPeer(peer) {
-                let _ = network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: Int32(clamping: threadId), readMaxId: messageIndex.id.id)).start()
+                let _ = network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: Int32(clamping: threadId), readMaxId: messageIndex.id.id), ayuExplicitRead: true).startStandalone()
             }
         } else if peer.isMonoForum {
             if let inputPeer = apiInputPeer(peer), let subPeer = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer) {
-                let _ = network.request(Api.functions.messages.readSavedHistory(parentPeer: inputPeer, peer: subPeer, maxId: messageIndex.id.id)).start()
+                let _ = network.request(Api.functions.messages.readSavedHistory(parentPeer: inputPeer, peer: subPeer, maxId: messageIndex.id.id), ayuExplicitRead: true).startStandalone()
             }
         }
     }
@@ -258,11 +258,11 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, netwo
                 
                 if peer.isForum {
                     if let inputPeer = apiInputPeer(peer) {
-                        let _ = network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: Int32(clamping: item.threadId), readMaxId: messageIndex.id.id)).start()
+                        let _ = network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: Int32(clamping: item.threadId), readMaxId: messageIndex.id.id), ayuExplicitRead: true).startStandalone()
                     }
                 } else if peer.isMonoForum {
                     if let inputPeer = apiInputPeer(peer), let subPeer = transaction.getPeer(PeerId(item.threadId)).flatMap(apiInputPeer) {
-                        let _ = network.request(Api.functions.messages.readSavedHistory(parentPeer: inputPeer, peer: subPeer, maxId: messageIndex.id.id)).start()
+                        let _ = network.request(Api.functions.messages.readSavedHistory(parentPeer: inputPeer, peer: subPeer, maxId: messageIndex.id.id), ayuExplicitRead: true).startStandalone()
                     }
                 }
             }
@@ -292,6 +292,9 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, netwo
             }
         }
         
+        if network.ayuPreferences.current.suppressReads && (setToValue == false || (setToValue == nil && hasUnread)), let index = transaction.getTopPeerMessageIndex(peerId: peerId) {
+            network.ayuReadHistory(peer: peer, index: index)
+        }
         if hasUnread {
             if setToValue == nil || !(setToValue!) {
                 if let index = transaction.getTopPeerMessageIndex(peerId: peerId) {

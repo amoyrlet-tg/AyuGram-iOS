@@ -963,6 +963,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         let isPremium = accountPeer?.isPremium ?? false
 
         var actions: [ContextMenuItem] = []
+        if message.id.namespace == Namespaces.Message.Cloud {
+            actions.append(.action(ContextMenuActionItem(text: "History", icon: { theme in
+                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
+            }, action: { controller, _ in
+                controller?.dismiss(completion: {
+                    controllerInteraction.navigationController()?.pushViewController(ayuMessageHistoryController(context: context, message: message))
+                })
+            })))
+        }
+
 
         if isSharedMediaPolls && messages.count == 1 {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.SharedMedia_ViewInChat, icon: { theme in

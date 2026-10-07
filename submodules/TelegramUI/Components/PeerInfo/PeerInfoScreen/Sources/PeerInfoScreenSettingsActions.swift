@@ -44,6 +44,8 @@ extension PeerInfoScreenNode {
             }
         }
         switch section {
+        case .ayuPreferences:
+            self.controller?.push(ayuPreferencesController(context: self.context))
         case .avatar:
             self.controller?.openAvatarForEditing()
         case .edit:

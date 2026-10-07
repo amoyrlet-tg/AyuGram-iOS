@@ -425,6 +425,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             return .update(updatedMessageValue)
         })
         if let updatedMessage = updatedMessage, case let .Id(updatedId) = updatedMessage.id {
+            AyuAutoDeleteQueue(mediaBox: postbox.mediaBox).schedule(id: updatedId, preferences: stateManager.network.ayuPreferences.current)
             if message.id.namespace == Namespaces.Message.Local && updatedId.namespace == Namespaces.Message.Cloud && updatedId.peerId.namespace == Namespaces.Peer.CloudChannel {
                 if let threadId = updatedMessage.threadId {
                     if let authorId = updatedMessage.authorId {
@@ -582,6 +583,9 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         }
         
         for (message, _, updatedMessage) in mapping {
+            if case let .Id(id) = updatedMessage.id {
+                AyuAutoDeleteQueue(mediaBox: postbox.mediaBox).schedule(id: id, preferences: stateManager.network.ayuPreferences.current)
+            }
             transaction.updateMessage(message.id, update: { currentMessage in
                 let updatedId: MessageId
                 if case let .Id(id) = updatedMessage.id {

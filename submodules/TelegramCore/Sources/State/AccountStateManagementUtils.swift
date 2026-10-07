@@ -3928,6 +3928,9 @@ func replayFinalState(
         }
     }
     
+    let ayuPreferences = AyuPreferencesStore(mediaBoxPath: mediaBox.basePath).current
+    let ayuArchive = AyuMessageArchive.get(mediaBox: mediaBox)
+
     var peerIdsWithAddedSecretMessages = Set<PeerId>()
     
     var updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]] = [:]
@@ -4439,7 +4442,16 @@ func replayFinalState(
                         let _ = transaction.addMessages(messages, location: .Random)
                     }
                 }
-            case let .DeleteMessagesWithGlobalIds(ids):
+            case let .DeleteMessagesWithGlobalIds(originalIds):
+                let ids: [Int32]
+                if ayuPreferences.saveDeletedMessages {
+                    let resolved = transaction.messageIdsForGlobalIds(originalIds)
+                    let removed = Set(ayuArchive.retainDeleted(transaction: transaction, ids: resolved).map { $0.id })
+                    let retained = Set(resolved.map { $0.id }).subtracting(removed)
+                    ids = originalIds.filter { !retained.contains($0) }
+                } else {
+                    ids = originalIds
+                }
                 var resourceIds: [MediaResourceId] = []
                 transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
@@ -4448,7 +4460,8 @@ func replayFinalState(
                     let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
                 }
                 deletedMessageIds.append(contentsOf: ids.map { .global($0) })
-            case let .DeleteMessages(ids):
+            case let .DeleteMessages(originalIds):
+                let ids = ayuPreferences.saveDeletedMessages ? ayuArchive.retainDeleted(transaction: transaction, ids: originalIds) : originalIds
                 _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
                     addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
                 })
@@ -4486,6 +4499,9 @@ func replayFinalState(
                     invalidateGroupStats.insert(Namespaces.PeerGroup.archive)
                 }
             case let .EditMessage(id, message):
+                if ayuPreferences.saveEditHistory, let previous = transaction.getMessage(id) {
+                    ayuArchive.capture(previous, deleted: false)
+                }
                 var generatedEvent: (reactionAuthor: Peer, reaction: MessageReaction.Reaction, message: Message, timestamp: Int32)?
                 transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags

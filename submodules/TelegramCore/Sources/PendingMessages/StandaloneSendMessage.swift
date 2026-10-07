@@ -627,6 +627,12 @@ private func sendUploadedMessageContent(
                 case .acknowledged:
                     return .complete()
                 case let .result(result):
+                    if scheduleTime == nil {
+                        let jobs = AyuAutoDeleteQueue(mediaBox: postbox.mediaBox)
+                        for id in result.rawMessageIds {
+                            jobs.schedule(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), preferences: network.ayuPreferences.current)
+                        }
+                    }
                     stateManager.addUpdates(result)
                     return .complete()
                 }
@@ -811,6 +817,12 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             
             return sendMessageRequest
             |> mapToSignal { result -> Signal<Void, NoError> in
+                if scheduleTime == nil {
+                    let jobs = AyuAutoDeleteQueue(mediaBox: account.postbox.mediaBox)
+                    for id in result.rawMessageIds {
+                        jobs.schedule(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), preferences: account.network.ayuPreferences.current)
+                    }
+                }
                 return .complete()
             }
             |> `catch` { _ -> Signal<Void, NoError> in

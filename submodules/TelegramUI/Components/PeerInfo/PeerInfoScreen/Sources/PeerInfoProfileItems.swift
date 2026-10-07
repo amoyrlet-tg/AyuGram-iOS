@@ -59,6 +59,20 @@ func infoItems(
         items[section] = []
     }
     
+    if let peer = data.peer {
+        let preferences = context.account.network.ayuPreferences.current
+        if preferences.showNumericId, let id = ayuBotAPIId(peer.id) {
+            items[.peerInfo]!.append(PeerInfoScreenInfoItem(id: 90001, title: "ID (Bot API)", text: .plain(String(id)), linkAction: nil))
+        }
+        if preferences.showDcId {
+            if peer.id == context.account.peerId {
+                items[.peerInfo]!.append(PeerInfoScreenInfoItem(id: 90002, title: "Account DC ID", text: .plain(String(context.account.network.datacenterId)), linkAction: nil))
+            } else if let resource = peer.profileImageRepresentations.first?.resource as? CloudPeerPhotoSizeMediaResource {
+                items[.peerInfo]!.append(PeerInfoScreenInfoItem(id: 90002, title: "Profile photo DC ID", text: .plain(String(resource.datacenterId)), linkAction: nil))
+            }
+        }
+    }
+
     let bioContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
         interaction.openBioContextMenu(node, gesture)
     }

@@ -261,6 +261,9 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
 
                                         if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum), case let .Id(id) = message.id {
                                             transaction.updateMessage(id, update: { previousMessage in
+                                                if network.ayuPreferences.current.saveEditHistory {
+                                                    AyuMessageArchive.get(mediaBox: postbox.mediaBox).capture(previousMessage, deleted: false)
+                                                }
                                                 var updatedFlags = message.flags
                                                 var updatedLocalTags = message.localTags
                                                 if previousMessage.localTags.contains(.OutgoingLiveLocation) {
@@ -287,6 +290,9 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
 
                                         if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum), case let .Id(id) = message.id {
                                             transaction.updateMessage(id, update: { previousMessage in
+                                                if network.ayuPreferences.current.saveEditHistory {
+                                                    AyuMessageArchive.get(mediaBox: postbox.mediaBox).capture(previousMessage, deleted: false)
+                                                }
                                                 var updatedFlags = message.flags
                                                 var updatedLocalTags = message.localTags
                                                 if previousMessage.localTags.contains(.OutgoingLiveLocation) {
@@ -313,6 +319,9 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
 
                                         if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum), case let .Id(id) = message.id {
                                             transaction.updateMessage(id, update: { previousMessage in
+                                                if network.ayuPreferences.current.saveEditHistory {
+                                                    AyuMessageArchive.get(mediaBox: postbox.mediaBox).capture(previousMessage, deleted: false)
+                                                }
                                                 var updatedFlags = message.flags
                                                 var updatedLocalTags = message.localTags
                                                 if previousMessage.localTags.contains(.OutgoingLiveLocation) {
@@ -339,6 +348,9 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                                         
                                         if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForumOrMonoForum), case let .Id(id) = message.id {
                                             transaction.updateMessage(id, update: { previousMessage in
+                                                if network.ayuPreferences.current.saveEditHistory {
+                                                    AyuMessageArchive.get(mediaBox: postbox.mediaBox).capture(previousMessage, deleted: false)
+                                                }
                                                 var updatedFlags = message.flags
                                                 var updatedLocalTags = message.localTags
                                                 if previousMessage.localTags.contains(.OutgoingLiveLocation) {

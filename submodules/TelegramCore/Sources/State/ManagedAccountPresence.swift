@@ -17,20 +17,34 @@ private final class AccountPresenceManagerImpl {
     private var onlineTimer: SignalKitTimer?
     
     private var wasOnline: Bool = false
+    private var activityDisposable: Disposable?
+    private var preferences = AyuPreferences()
     
     init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
         self.queue = queue
         self.network = network
         
-        self.shouldKeepOnlinePresenceDisposable = (shouldKeepOnlinePresence
-        |> distinctUntilChanged
+        self.shouldKeepOnlinePresenceDisposable = (combineLatest(shouldKeepOnlinePresence, network.ayuPreferences.signal)
+        |> distinctUntilChanged(isEqual: { $0.0 == $1.0 && $0.1 == $1.1 })
         |> deliverOn(self.queue)).start(next: { [weak self] value in
             guard let `self` = self else {
                 return
             }
-            if self.wasOnline != value {
-                self.wasOnline = value
-                self.updatePresence(value)
+            let (foreground, preferences) = value
+            let changed = self.preferences != preferences
+            self.preferences = preferences
+            let online = AyuPrivacyPolicy.passiveOnline(foreground: foreground, preferences: preferences)
+            if self.wasOnline != online || changed || preferences.suppressOnline {
+                self.wasOnline = online
+                self.updatePresence(online)
+            }
+        })
+        self.activityDisposable = (network.ayuActivity.ended.signal()
+        |> deliverOn(self.queue)).start(next: { [weak self] _ in
+            guard let self = self else { return }
+            if self.network.ayuActivity.isIdle && AyuPrivacyPolicy.returnOfflineAfterAction(preferences: self.preferences) {
+                self.wasOnline = false
+                self.updatePresence(false)
             }
         })
     }
@@ -39,10 +53,12 @@ private final class AccountPresenceManagerImpl {
         assert(self.queue.isCurrent())
         self.shouldKeepOnlinePresenceDisposable?.dispose()
         self.currentRequestDisposable.dispose()
+        self.activityDisposable?.dispose()
         self.onlineTimer?.invalidate()
     }
     
-    private func updatePresence(_ isOnline: Bool) {
+    private func updatePresence(_ requestedOnline: Bool) {
+        let isOnline = requestedOnline && !self.network.ayuPreferences.current.suppressOnline
         let request: Signal<Api.Bool, MTRpcError>
         if isOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
@@ -61,9 +77,7 @@ private final class AccountPresenceManagerImpl {
         }
         self.isPerformingUpdate.set(true)
         self.currentRequestDisposable.set((request
-        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-            return .single(.boolFalse)
-        }
+        |> retryRequest
         |> deliverOn(self.queue)).start(completed: { [weak self] in
             guard let strongSelf = self else {
                 return

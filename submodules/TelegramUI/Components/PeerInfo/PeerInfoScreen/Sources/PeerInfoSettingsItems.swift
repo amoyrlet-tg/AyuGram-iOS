@@ -37,6 +37,10 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         items[section] = []
     }
     
+    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 10001, text: "AyuGram Preferences", icon: PresentationResourcesSettings.security, action: {
+        interaction.openSettings(.ayuPreferences)
+    }))
+
     let setPhotoTitle: String
     if let peer = data.peer, !peer.profileImageRepresentations.isEmpty {
         setPhotoTitle = presentationData.strings.Settings_ChangeProfilePhoto

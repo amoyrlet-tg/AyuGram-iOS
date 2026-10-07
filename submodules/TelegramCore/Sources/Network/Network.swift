@@ -802,6 +802,9 @@ private final class NetworkSpeedLimitedEventState {
 }
 
 public final class Network: NSObject, MTRequestMessageServiceDelegate {
+    public var ayuPreferences = AyuPreferencesStore()
+    let ayuActivity = AyuActivityTracker()
+    let ayuReadStateUpdates = ValuePipe<(Int32, Int32)>()
     public let encryptionProvider: EncryptionProvider
     
     private let queue: Queue
@@ -1083,9 +1086,17 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    public func requestWithAdditionalInfo<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), info: NetworkRequestAdditionalInfo, tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<NetworkRequestResult<T>, MTRpcError> {
+    public func requestWithAdditionalInfo<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), info: NetworkRequestAdditionalInfo, tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, ayuExplicitRead: Bool = false, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<NetworkRequestResult<T>, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
+            if AyuRequestPolicy.suppress(data.0, preferences: self.ayuPreferences.current, explicitRead: ayuExplicitRead) {
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            let activity = MetaDisposable()
+            if AyuRequestPolicy.activeMethods.contains(data.0.name) || (ayuExplicitRead && AyuRequestPolicy.readMethods.contains(data.0.name)) {
+                activity.set(self.ayuActivity.begin())
+            }
             let request = MTRequest()
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
@@ -1123,6 +1134,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
+                activity.dispose()
                 if let error = error {
                     subscriber.putError(error)
                 } else {
@@ -1150,14 +1162,23 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             requestService.add(request)
             
             return ActionDisposable { [weak requestService] in
+                activity.dispose()
                 requestService?.removeRequest(byInternalId: internalId)
             }
         }
     }
     
-    public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true, ayuExplicitRead: Bool = false, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
+            if AyuRequestPolicy.suppress(data.0, preferences: self.ayuPreferences.current, explicitRead: ayuExplicitRead) {
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            let activity = MetaDisposable()
+            if AyuRequestPolicy.activeMethods.contains(data.0.name) || (ayuExplicitRead && AyuRequestPolicy.readMethods.contains(data.0.name)) {
+                activity.set(self.ayuActivity.begin())
+            }
             let request = MTRequest()
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
@@ -1183,6 +1204,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
+                activity.dispose()
                 if let error = error {
                     subscriber.putError(error)
                 } else {
@@ -1210,6 +1232,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             requestService.add(request)
             
             return ActionDisposable { [weak requestService] in
+                activity.dispose()
                 requestService?.removeRequest(byInternalId: internalId)
             }
         }
