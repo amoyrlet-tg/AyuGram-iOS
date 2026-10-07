@@ -56,9 +56,11 @@ class SideloadTests(unittest.TestCase):
             command.set_configuration('release_arm64')
             command.invoke_build()
             self.assertNotIn('--//Telegram:disableExtensions', call.call_args.args[0])
+            self.assertNotIn('//Telegram:TelegramEntitlements', call.call_args.args[0])
             command.sideload = True
             command.set_disable_provisioning_profiles()
             command.invoke_build()
+            self.assertIn('//Telegram:TelegramEntitlements', call.call_args.args[0])
             for flag in ['--//Telegram:disableProvisioningProfiles', '--//Telegram:disableExtensions', '--features=apple.sideload', '--features=disable_legacy_signing']:
                 self.assertIn(flag, call.call_args.args[0])
 

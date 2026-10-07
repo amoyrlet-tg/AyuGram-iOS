@@ -289,6 +289,10 @@ class BazelCommandLine:
             combined_arguments += [self.custom_target]
         else:
             combined_arguments += ['Telegram/Telegram']
+            if self.sideload:
+                # Packaging needs this top-level output even when signing is
+                # disabled and the app does not materialize its entitlements.
+                combined_arguments += ['//Telegram:TelegramEntitlements']
 
         if self.continue_on_error:
             combined_arguments += ['--keep_going']
