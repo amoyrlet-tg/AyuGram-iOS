@@ -1654,7 +1654,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
                 
             if self.context.account.network.ayuPreferences.current.foldersAtBottom,
-               self.location == .chatList(groupId: .root), !self.isSearchDisplayControllerActive,
+               self.location == .chatList(groupId: .root), self.isSearchDisplayControllerActive == nil,
                self.toolbarData == nil, !self.isReorderingFilters {
                 self.ayuFolderTabs = tabs
                 tabs = nil
