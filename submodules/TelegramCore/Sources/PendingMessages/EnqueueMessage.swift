@@ -682,7 +682,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
      * If it is a support account, mark messages as read here as they are
      * not marked as read when chat is opened.
      **/
-    if account.isSupportUser {
+    if account.isSupportUser && !account.network.ayuPreferences.current.suppressReads {
         let namespace: MessageId.Namespace
         if peerId.namespace == Namespaces.Peer.SecretChat {
             namespace = Namespaces.Message.SecretIncoming

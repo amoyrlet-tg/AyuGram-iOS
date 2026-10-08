@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TextNodeWithEntities
 import AccountContext
+import TelegramCore
 
 final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     enum Label {
@@ -50,17 +51,19 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     let additionalBadgeLabel: String?
     let additionalBadgeIcon: UIImage?
     let text: String
+    let ayuIdentityKind: AyuIdentityKind?
     let icon: UIImage?
     let iconSignal: Signal<UIImage?, NoError>?
     let hasArrow: Bool
     let action: (() -> Void)?
     
-    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, hasArrow: Bool = true, action: (() -> Void)?) {
+    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, ayuIdentityKind: AyuIdentityKind? = nil, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, hasArrow: Bool = true, action: (() -> Void)?) {
         self.id = id
         self.label = label
         self.additionalBadgeLabel = additionalBadgeLabel
         self.additionalBadgeIcon = additionalBadgeIcon
         self.text = text
+        self.ayuIdentityKind = ayuIdentityKind
         self.icon = icon
         self.iconSignal = iconSignal
         self.hasArrow = hasArrow
@@ -412,6 +415,11 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         
         self.activateArea.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
         
+        if let kind = item.ayuIdentityKind {
+            AyuStreamerMode.bind(to: self.textNode.view, kind: kind, store: context.account.network.ayuPreferences)
+        } else {
+            AyuStreamerMode.unbind(from: self.textNode.view)
+        }
         return height
     }
 }

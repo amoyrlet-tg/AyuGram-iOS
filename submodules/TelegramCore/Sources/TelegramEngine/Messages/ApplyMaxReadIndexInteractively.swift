@@ -11,6 +11,7 @@ func _internal_applyMaxReadIndexInteractively(postbox: Postbox, stateManager: Ac
 }
     
 func _internal_applyMaxReadIndexInteractively(transaction: Transaction, stateManager: AccountStateManager, index: MessageIndex) {
+    guard !stateManager.network.ayuPreferences.current.suppressReads else { return }
     let messageIds = transaction.applyInteractiveReadMaxIndex(index)
     
     if let peer = transaction.getPeer(index.id.peerId), peer.isForumOrMonoForum {

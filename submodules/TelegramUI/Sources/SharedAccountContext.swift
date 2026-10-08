@@ -2606,6 +2606,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode)
         )
         
+        // Local standalone history is hosted in an upright ItemList, not the
+        // inverted live-chat list. Keep its bubbles in the same orientation.
+        if isPreview && isStandalone && messages.allSatisfy({ $0.id.namespace == Namespaces.Message.Local }) {
+            controllerInteraction.chatIsRotated = false
+        }
+
         var entryAttributes = ChatMessageEntryAttributes()
         entryAttributes.isCentered = isCentered
         if let rank {

@@ -1101,6 +1101,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         componentTransition.setFrame(view: self.backgroundView, frame: backgroundFrame)
         self.backgroundView.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.height * 0.5, isDark: self.theme.overallDarkAppearance, tintColor: .init(kind: .panel), isInteractive: false, transition: componentTransition)
         
+        AyuStreamerMode.bind(to: self.titleTextNode.view, kind: .name, store: self.context.account.network.ayuPreferences)
         return availableSize
     }
     

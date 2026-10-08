@@ -61,15 +61,19 @@ func infoItems(
     
     if let peer = data.peer {
         let preferences = context.account.network.ayuPreferences.current
+        var identifiers: [String] = []
         if preferences.showNumericId, let id = ayuBotAPIId(peer.id) {
-            items[.peerInfo]!.append(PeerInfoScreenInfoItem(id: 90001, title: "ID (Bot API)", text: .plain(String(id)), linkAction: nil))
+            identifiers.append("ID: \(id)")
         }
         if preferences.showDcId {
             if peer.id == context.account.peerId {
-                items[.peerInfo]!.append(PeerInfoScreenInfoItem(id: 90002, title: "Account DC ID", text: .plain(String(context.account.network.datacenterId)), linkAction: nil))
+                identifiers.append("DC: \(context.account.network.datacenterId)")
             } else if let resource = peer.profileImageRepresentations.first?.resource as? CloudPeerPhotoSizeMediaResource {
-                items[.peerInfo]!.append(PeerInfoScreenInfoItem(id: 90002, title: "Profile photo DC ID", text: .plain(String(resource.datacenterId)), linkAction: nil))
+                identifiers.append("Photo DC: \(resource.datacenterId)")
             }
+        }
+        if !identifiers.isEmpty {
+            items[.peerInfoTrailing]!.append(PeerInfoScreenDisclosureItem(id: 90001, text: identifiers.joined(separator: " · "), ayuIdentityKind: .username, hasArrow: false, action: nil))
         }
     }
 
@@ -177,7 +181,7 @@ func infoItems(
             } else {
                 label = presentationData.strings.ContactInfo_PhoneLabelMobile
             }
-            items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemPhoneNumber, label: label, text: formattedPhone, textColor: .accent, action: { node, progress in
+            items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemPhoneNumber, label: label, ayuIdentityKind: .phone, text: formattedPhone, textColor: .accent, action: { node, progress in
                 interaction.openPhone(phone, node, nil, progress)
             }, longTapAction: nil, contextAction: { node, gesture, _ in
                 interaction.openPhone(phone, node, gesture, nil)
@@ -196,6 +200,7 @@ func infoItems(
                 PeerInfoScreenLabeledValueItem(
                     id: ItemUsername,
                     label: presentationData.strings.Profile_Username,
+                    ayuIdentityKind: .username,
                     text: "@\(mainUsername)",
                     additionalText: additionalUsernames,
                     textColor: .accent,
@@ -589,6 +594,7 @@ func infoItems(
                 PeerInfoScreenLabeledValueItem(
                     id: ItemUsername,
                     label: presentationData.strings.Channel_LinkItem,
+                    ayuIdentityKind: .username,
                     text: linkText,
                     textColor: .accent,
                     icon: .qrCode,
@@ -641,6 +647,7 @@ func infoItems(
                     PeerInfoScreenLabeledValueItem(
                         id: ItemUsername,
                         label: presentationData.strings.Channel_LinkItem,
+                        ayuIdentityKind: .username,
                         text: "https://t.me/\(mainUsername)",
                         additionalText: additionalUsernames,
                         textColor: .accent,

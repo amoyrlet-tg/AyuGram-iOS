@@ -2096,7 +2096,8 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
             |> ignoreValues
         }
     } else {
-        return account.postbox.transaction { transaction -> Api.InputUser? in
+        return account.postbox.transaction { transaction -> Bool in
+            guard !account.network.ayuPreferences.current.suppressStories else { return false }
             if let peerStoryState = transaction.getPeerStoryState(peerId: peerId)?.entry.get(Stories.PeerState.self) {
                 transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
                     maxReadId: max(peerStoryState.maxReadId, id)
@@ -2108,9 +2109,10 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
             _internal_addSynchronizeViewStoriesOperation(peerId: peerId, storyId: id, transaction: transaction)
             #endif
             
-            return transaction.getPeer(peerId).flatMap(apiInputUser)
+            return true
         }
-        |> mapToSignal { _ -> Signal<Never, NoError> in
+        |> mapToSignal { didRead -> Signal<Never, NoError> in
+            guard didRead else { return .complete() }
             account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
             
             return .complete()

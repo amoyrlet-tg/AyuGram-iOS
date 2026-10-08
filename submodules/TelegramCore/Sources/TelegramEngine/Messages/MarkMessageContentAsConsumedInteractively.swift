@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
+        guard !network.ayuPreferences.current.suppressReads else { return }
         if let message = transaction.getMessage(messageId), message.flags.contains(.Incoming) {
             var updateMessage = false
             var updatedAttributes = message.attributes
@@ -262,4 +263,3 @@ func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: M
         }
     }
 }
-

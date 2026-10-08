@@ -1646,6 +1646,7 @@ public final class AccountViewTracker {
     
     public func updateMarkMentionsSeenForMessageIds(messageIds: Set<MessageId>) {
         self.queue.async {
+            guard let account = self.account, !account.network.ayuPreferences.current.suppressReads else { return }
             var addedMessageIds: [MessageId] = []
             for messageId in messageIds {
                 if !self.updatedSeenPersonalMessageIds.contains(messageId) {
@@ -1749,6 +1750,7 @@ public final class AccountViewTracker {
     
     public func updateMarkReactionsAndVotesSeenForMessageIds(messageIds: Set<MessageId>) {
         self.queue.async {
+            guard let account = self.account, !account.network.ayuPreferences.current.suppressReads else { return }
             let addedMessageIds: [MessageId] = Array(messageIds)
             if !addedMessageIds.isEmpty {
                 if let account = self.account {

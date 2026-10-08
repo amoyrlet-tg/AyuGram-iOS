@@ -36,6 +36,27 @@ public struct AyuPreferences: Codable, Equatable {
     public var suppressActivity: Bool { self.ghostMode || self.dontSendActivity }
     public var suppressOnline: Bool { self.ghostMode || self.dontSendOnline }
 
+    public var ghostModeActive: Bool {
+        self.suppressReads && self.suppressStories && self.suppressOnline && self.suppressActivity && (self.ghostMode || self.autoOffline)
+    }
+
+    public mutating func setGhostModeEnabled(_ enabled: Bool) {
+        self.ghostMode = enabled
+        self.dontReadMessages = enabled
+        self.dontReadStories = enabled
+        self.dontSendOnline = enabled
+        self.dontSendActivity = enabled
+        self.autoOffline = enabled
+    }
+
+    public mutating func setGhostOption(_ keyPath: WritableKeyPath<AyuPreferences, Bool>, enabled: Bool) {
+        // Materialize legacy master overrides before editing one option. The
+        // master reflects the checkboxes, just like AyuGram Desktop.
+        if self.ghostMode { self.setGhostModeEnabled(true) }
+        self.ghostMode = false
+        self[keyPath: keyPath] = enabled
+    }
+
     private enum CodingKeys: String, CodingKey {
         case ghostMode, dontReadMessages, dontReadStories, dontSendActivity, dontSendOnline, autoOffline
         case saveDeletedMessages, saveEditHistory, archiveMedia, streamerMode, hideNames, hideUsernames, hidePhoneNumbers, showTimestampSeconds

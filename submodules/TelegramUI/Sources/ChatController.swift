@@ -7672,7 +7672,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.didAppear = true
         
         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
-        self.chatDisplayNode.historyNode.canReadHistory.set(self.computedCanReadHistoryPromise.get())
+        self.chatDisplayNode.historyNode.canReadHistory.set(combineLatest(
+            self.computedCanReadHistoryPromise.get(),
+            self.context.account.network.ayuPreferences.signal
+        ) |> map { canRead, preferences in
+            canRead && !preferences.suppressReads
+        })
         self.chatDisplayNode.historyNode.areContentAnimationsEnabled = true
         
         if !self.alwaysShowSearchResultsAsList {

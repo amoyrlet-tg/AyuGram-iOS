@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 func _internal_installInteractiveReadMessagesAction(postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, threadId: Int64?) -> Disposable {
     return postbox.installStoreMessageAction(peerId: peerId, { messages, transaction in
+        guard !stateManager.network.ayuPreferences.current.suppressReads else { return }
         var consumeMessageIds: [MessageId] = []
         var readReactionOrPollVotesIds: [MessageId] = []
         
@@ -176,15 +177,18 @@ public struct VisibleMessageRange {
 }
 
 private final class StoreOrUpdateMessageActionImpl: StoreOrUpdateMessageAction {
+    private let preferences: AyuPreferencesStore
     private let getVisibleRange: () -> VisibleMessageRange?
     private let didReadReactionsInMessages: ([MessageId: [ReactionsMessageAttribute.RecentPeer]]) -> Void
     
-    init(getVisibleRange: @escaping () -> VisibleMessageRange?, didReadReactionsInMessages: @escaping ([MessageId: [ReactionsMessageAttribute.RecentPeer]]) -> Void) {
+    init(preferences: AyuPreferencesStore, getVisibleRange: @escaping () -> VisibleMessageRange?, didReadReactionsInMessages: @escaping ([MessageId: [ReactionsMessageAttribute.RecentPeer]]) -> Void) {
+        self.preferences = preferences
         self.getVisibleRange = getVisibleRange
         self.didReadReactionsInMessages = didReadReactionsInMessages
     }
     
     func addOrUpdate(messages: [StoreMessage], transaction: Transaction) {
+        guard !self.preferences.current.suppressReads else { return }
         var readReactionIds: [MessageId: [ReactionsMessageAttribute.RecentPeer]] = [:]
         var readPollVoteIds = Set<MessageId>()
         
@@ -245,5 +249,5 @@ private final class StoreOrUpdateMessageActionImpl: StoreOrUpdateMessageAction {
 }
 
 func _internal_installInteractiveReadReactionsAction(postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, getVisibleRange: @escaping () -> VisibleMessageRange?, didReadReactionsInMessages: @escaping ([MessageId: [ReactionsMessageAttribute.RecentPeer]]) -> Void) -> Disposable {
-    return postbox.installStoreOrUpdateMessageAction(peerId: peerId, action: StoreOrUpdateMessageActionImpl(getVisibleRange: getVisibleRange, didReadReactionsInMessages: didReadReactionsInMessages))
+    return postbox.installStoreOrUpdateMessageAction(peerId: peerId, action: StoreOrUpdateMessageActionImpl(preferences: stateManager.network.ayuPreferences, getVisibleRange: getVisibleRange, didReadReactionsInMessages: didReadReactionsInMessages))
 }

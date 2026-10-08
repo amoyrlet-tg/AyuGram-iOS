@@ -315,6 +315,7 @@ private class ReplyThreadHistoryContextImpl {
     }
     
     func applyMaxReadIndex(messageIndex: MessageIndex) {
+        guard !self.account.network.ayuPreferences.current.suppressReads else { return }
         let peerId = self.peerId
         let threadId = self.threadId
         
@@ -334,6 +335,7 @@ private class ReplyThreadHistoryContextImpl {
         let account = self.account
         
         let _ = (self.account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputPeer?, MessageId?, Int?) in
+            guard !account.network.ayuPreferences.current.suppressReads else { return (nil, nil, nil, nil) }
             guard let peer = transaction.getPeer(peerId) else {
                 return (nil, nil, nil, nil)
             }

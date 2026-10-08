@@ -1,6 +1,6 @@
 import Foundation
 
-public enum AyuIdentityKind {
+public enum AyuIdentityKind: Equatable {
     case name
     case username
     case phone

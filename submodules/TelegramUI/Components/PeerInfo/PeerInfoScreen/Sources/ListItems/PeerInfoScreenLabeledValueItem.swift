@@ -66,6 +66,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     let id: AnyHashable
     let context: AccountContext?
     let label: String
+    let ayuIdentityKind: AyuIdentityKind?
     let rightLabel: String?
     let text: String
     let entities: [MessageTextEntity]
@@ -87,6 +88,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         id: AnyHashable,
         context: AccountContext? = nil,
         label: String,
+        ayuIdentityKind: AyuIdentityKind? = nil,
         rightLabel: String? = nil,
         text: String,
         entities: [MessageTextEntity] = [],
@@ -107,6 +109,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         self.id = id
         self.context = context
         self.label = label
+        self.ayuIdentityKind = ayuIdentityKind
         self.rightLabel = rightLabel
         self.text = text
         self.entities = entities
@@ -867,6 +870,13 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             }
         }
         
+        if let kind = item.ayuIdentityKind {
+            AyuStreamerMode.bind(to: self.textNode.view, kind: kind, store: context.account.network.ayuPreferences)
+            AyuStreamerMode.bind(to: self.additionalTextNode.view, kind: kind, store: context.account.network.ayuPreferences)
+        } else {
+            AyuStreamerMode.unbind(from: self.textNode.view)
+            AyuStreamerMode.unbind(from: self.additionalTextNode.view)
+        }
         return height
     }
     
