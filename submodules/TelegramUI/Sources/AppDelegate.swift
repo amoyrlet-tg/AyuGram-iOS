@@ -949,7 +949,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
                 var icons = [
-                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                    PresentationAppIcon(name: "AyuGram", imageName: "AyuGram", isDefault: true),
+                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon"),
                     PresentationAppIcon(name: "New2", imageName: "New2"),
                     PresentationAppIcon(name: "New1", imageName: "New1"),
                     PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
@@ -2003,6 +2004,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        let iconMigrationKey = "ayu.defaultIcon.v2"
+        if !UserDefaults.standard.bool(forKey: iconMigrationKey), application.supportsAlternateIcons {
+            UserDefaults.standard.set(true, forKey: iconMigrationKey)
+            if application.alternateIconName != nil {
+                application.setAlternateIconName(nil) { error in
+                    if error != nil { UserDefaults.standard.removeObject(forKey: iconMigrationKey) }
+                }
+            }
+        }
         self.isInForegroundValue = true
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true

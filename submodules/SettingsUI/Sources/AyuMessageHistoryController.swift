@@ -7,11 +7,19 @@ import TelegramPresentationData
 import ItemListUI
 import AccountContext
 
+private struct AyuHistoryMoment: Hashable, Comparable {
+    let timestamp: Int32
+    let occurrence: Int
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.timestamp == rhs.timestamp ? lhs.occurrence < rhs.occurrence : lhs.timestamp < rhs.timestamp
+    }
+}
+
 private struct AyuHistoryEntry: ItemListNodeEntry {
     let stableId: Int32
     var section: ItemListSectionId { 0 }
     let text: String
-    let message: EngineRawMessage?
+    let messages: [EngineRawMessage]
     let data: PresentationData
 
     static func == (lhs: Self, rhs: Self) -> Bool {
@@ -21,11 +29,11 @@ private struct AyuHistoryEntry: ItemListNodeEntry {
 
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let context = arguments as! AccountContext
-        guard let message = self.message else {
+        guard !self.messages.isEmpty else {
             return ItemListTextItem(presentationData: presentationData, text: .plain(self.text), sectionId: self.section)
         }
         return context.sharedContext.makeChatMessagePreviewItem(
-            context: context, messages: [message], theme: self.data.theme, strings: self.data.strings,
+            context: context, messages: self.messages, theme: self.data.theme, strings: self.data.strings,
             wallpaper: self.data.chatWallpaper, fontSize: self.data.chatFontSize,
             chatBubbleCorners: self.data.chatBubbleCorners, dateTimeFormat: self.data.dateTimeFormat,
             nameOrder: self.data.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil,
@@ -35,44 +43,69 @@ private struct AyuHistoryEntry: ItemListNodeEntry {
     }
 }
 
-public func ayuMessageHistoryController(context: AccountContext, message: EngineRawMessage) -> ViewController {
-    let revisions = AyuMessageArchive.get(mediaBox: context.account.postbox.mediaBox).revisions(message.id)
-    let signal = context.sharedContext.presentationData
-    |> deliverOnMainQueue
+private func historyMessage(source: Message, revision: AyuMessageRevision?, id: Int32, groupingKey: Int64?) -> Message {
+    var media = source.media
+    var attributes = source.attributes
+    if let revision {
+        let decoder = PostboxDecoder(buffer: MemoryBuffer(data: revision.payload))
+        media = decoder.decodeObjectArrayForKey("media").compactMap { $0 as? Media }
+        attributes = decoder.decodeObjectArrayForKey("attributes").compactMap { $0 as? MessageAttribute }
+    }
+    return Message(
+        stableId: UInt32(id), stableVersion: 0,
+        id: MessageId(peerId: source.id.peerId, namespace: Namespaces.Message.Local, id: id),
+        globallyUniqueId: nil, groupingKey: groupingKey, groupInfo: nil, threadId: nil,
+        timestamp: revision?.timestamp ?? source.timestamp, flags: source.flags,
+        tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil,
+        author: revision?.senderId.flatMap { source.peers[PeerId($0)] } ?? source.author,
+        text: revision?.text ?? source.text, attributes: attributes, media: media,
+        peers: source.peers, associatedMessages: source.associatedMessages, associatedMessageIds: [],
+        associatedMedia: source.associatedMedia, associatedThreadInfo: nil, associatedStories: source.associatedStories
+    )
+}
+
+public func ayuMessageHistoryController(context: AccountContext, messages: [EngineRawMessage]) -> ViewController {
+    let sources = messages.sorted { $0.index < $1.index }
+    let archive = AyuMessageArchive.get(mediaBox: context.account.postbox.mediaBox)
+    let histories = sources.map { source -> [(AyuHistoryMoment, AyuMessageRevision)] in
+        var occurrences: [Int32: Int] = [:]
+        return archive.revisions(source.id).map { revision in
+            let occurrence = occurrences[revision.capturedAt, default: 0]
+            occurrences[revision.capturedAt] = occurrence + 1
+            return (AyuHistoryMoment(timestamp: revision.capturedAt, occurrence: occurrence), revision)
+        }
+    }
+    let moments = Set(histories.flatMap { $0.map { $0.0 } }).sorted()
+    let signal = context.sharedContext.presentationData |> deliverOnMainQueue
     |> map { data -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .medium
         var entries: [AyuHistoryEntry] = []
-        func append(_ text: String, message: EngineRawMessage? = nil) {
-            entries.append(AyuHistoryEntry(stableId: Int32(entries.count), text: text, message: message, data: data))
+        var nextId: Int32 = 1
+        func append(_ text: String, messages: [Message] = []) {
+            entries.append(AyuHistoryEntry(stableId: Int32(entries.count), text: text, messages: messages, data: data))
         }
-        append("Local history · Only versions saved on this device are shown.")
-        for (index, revision) in revisions.enumerated() {
-            let decoder = PostboxDecoder(buffer: MemoryBuffer(data: revision.payload))
-            let media = decoder.decodeObjectArrayForKey("media").compactMap { $0 as? Media }
-            let attributes = decoder.decodeObjectArrayForKey("attributes").compactMap { $0 as? MessageAttribute }
-            let kind = revision.deleted ? "Deleted" : (index == 0 ? "Original" : "Edited")
-            append(kind + " · " + formatter.string(from: Date(timeIntervalSince1970: TimeInterval(revision.capturedAt))))
-            let id = MessageId(peerId: message.id.peerId, namespace: Namespaces.Message.Local, id: Int32(index + 1))
-            let author = revision.senderId.flatMap { message.peers[PeerId($0)] } ?? message.author
-            let restored = Message(
-                stableId: UInt32(index + 1), stableVersion: 0, id: id, globallyUniqueId: nil,
-                groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: revision.timestamp,
-                flags: message.flags, tags: [], globalTags: [], localTags: [], customTags: [],
-                forwardInfo: nil, author: author, text: revision.text, attributes: attributes,
-                media: media, peers: message.peers, associatedMessages: message.associatedMessages,
-                associatedMessageIds: [], associatedMedia: message.associatedMedia,
-                associatedThreadInfo: nil, associatedStories: message.associatedStories
-            )
-            append("", message: restored)
+        append("Local history · Saved versions on this device. Album items are displayed together.")
+        for (frame, moment) in moments.enumerated() {
+            let snapshot = sources.enumerated().map { index, source -> Message in
+                let revisions = histories[index]
+                let revision = revisions.last(where: { $0.0 <= moment })?.1 ?? revisions.first?.1
+                defer { nextId += 1 }
+                return historyMessage(source: source, revision: revision, id: nextId, groupingKey: sources.count > 1 ? Int64(frame + 1) : nil)
+            }
+            let deleted = histories.contains { $0.contains { $0.0 == moment && $0.1.deleted } }
+            let label = deleted ? "Deleted" : (frame == 0 ? "Original saved version" : "Saved before edit")
+            append(label + " · " + formatter.string(from: Date(timeIntervalSince1970: TimeInterval(moment.timestamp))))
+            append("", messages: snapshot)
         }
-        let deleted = message.attributes.contains { $0 is AyuDeletedMessageAttribute }
-        append(deleted ? "Deleted · Last saved version" : "Current version")
-        let currentId = MessageId(peerId: message.id.peerId, namespace: Namespaces.Message.Local, id: Int32(revisions.count + 1))
-        append("", message: message.withUpdatedId(id: currentId).withUpdatedStableId(stableId: UInt32(revisions.count + 1)))
-        if revisions.isEmpty { append("No earlier versions saved on this device.") }
-        let state = ItemListControllerState(presentationData: ItemListPresentationData(data), title: .text("Message History"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: data.strings.Common_Back))
+        append(sources.contains { $0.attributes.contains { $0 is AyuDeletedMessageAttribute } } ? "Last saved version" : "Current version")
+        append("", messages: sources.map { source in
+            defer { nextId += 1 }
+            return historyMessage(source: source, revision: nil, id: nextId, groupingKey: sources.count > 1 ? Int64(moments.count + 1) : nil)
+        })
+        if moments.isEmpty { append("No earlier versions saved on this device.") }
+        let state = ItemListControllerState(presentationData: ItemListPresentationData(data), title: .text(sources.count > 1 ? "Album History" : "Message History"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: data.strings.Common_Back))
         return (state, (ItemListNodeState(presentationData: ItemListPresentationData(data), entries: entries, style: .plain, animateChanges: false), context))
     }
     return ItemListController(context: context, state: signal)

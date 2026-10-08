@@ -37,51 +37,9 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         items[section] = []
     }
     
-    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 10001, text: "AyuGram Preferences", icon: PresentationResourcesSettings.security, action: {
+    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 10001, text: "AyuGram Preferences", icon: ayuPreferencesIcon(), action: {
         interaction.openSettings(.ayuPreferences)
     }))
-
-    let setPhotoTitle: String
-    if let peer = data.peer, !peer.profileImageRepresentations.isEmpty {
-        setPhotoTitle = presentationData.strings.Settings_ChangeProfilePhoto
-    } else {
-        setPhotoTitle = presentationData.strings.Settings_SetProfilePhotoOrVideo
-    }
-    
-    var setStatusTitle: String = ""
-    let displaySetStatus: Bool
-    var hasEmojiStatus = false
-    if case let .user(peer) = data.peer, peer.isPremium {
-        if peer.emojiStatus != nil {
-            hasEmojiStatus = true
-            setStatusTitle = presentationData.strings.PeerInfo_ChangeEmojiStatus
-        } else {
-            setStatusTitle = presentationData.strings.PeerInfo_SetEmojiStatus
-        }
-        displaySetStatus = true
-    } else {
-        displaySetStatus = false
-    }
-    
-    if displaySetStatus {
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setStatusTitle, icon: UIImage(bundleImageName: hasEmojiStatus ? "Settings/EditEmojiStatus" : "Settings/SetEmojiStatus"), action: {
-            interaction.openSettings(.emojiStatus)
-        }))
-        
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.PeerInfo_ChangeProfileColor, icon: UIImage(bundleImageName: "Premium/BoostPerk/CoverColor"), action: {
-            interaction.openSettings(.profileColor)
-        }))
-    }
-    
-    items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
-        interaction.openSettings(.avatar)
-    }))
-    
-    if let peer = data.peer, (peer.addressName ?? "").isEmpty {
-        items[.edit]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
-            interaction.openSettings(.username)
-        }))
-    }
     
     if let settings = data.globalSettings {
         if settings.premiumGracePeriod {

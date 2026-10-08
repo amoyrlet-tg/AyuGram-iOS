@@ -856,6 +856,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     guard let strongSelf = self, let controller = strongSelf.getController() as? ContextControllerImpl else {
                         return
                     }
+                    controller.selectedReactionFromExpandedPicker = strongSelf.reactionContextNode?.isExpanded ?? false
+                    controller.updateReactionSelection = { [weak self] values in
+                        self?.reactionContextNode?.selectedItems = values
+                        self?.requestUpdate(.immediate)
+                    }
                     controller.reactionSelected?(reaction, isLarge)
                 }
                 let context = reactionItems.context
@@ -2137,5 +2142,4 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
 }
-
 

@@ -319,8 +319,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.regularContentNode.addSubnode(self.avatarListNode.listContainerNode.controlsClippingOffsetNode)
         self.regularContentNode.addSubnode(self.titleNodeContainer)
-        self.regularContentNode.addSubnode(self.titleNodeRawContainer)
-        self.titleNodeRawContainer.isUserInteractionEnabled = false
         self.regularContentNode.addSubnode(self.subtitleNodeContainer)
         self.regularContentNode.addSubnode(self.subtitleNodeRawContainer)
         self.regularContentNode.addSubnode(self.usernameNodeContainer)
@@ -2241,7 +2239,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 let standardTitleFrame = titleSize.centered(in: self.titleNodeContainer.frame).offsetBy(dx: 2.0, dy: 0.0)
                 standardTitleView.frame = standardTitleFrame
-                AyuStreamerMode.bind(to: standardTitleView, kind: .name, store: self.context.account.network.ayuPreferences)
             }
         } else {
             if let standardTitle = self.standardTitle {
@@ -2749,9 +2746,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.updateAvatarMask(transition: .immediate)
         }
         
-        AyuStreamerMode.bind(to: self.titleNodeRawContainer.view, kind: .name, store: self.context.account.network.ayuPreferences)
-        self.titleNodeRawContainer.isHidden = displayStandardTitle
-        AyuStreamerMode.bind(to: self.usernameNodeRawContainer.view, kind: .username, store: self.context.account.network.ayuPreferences)
+        if self.isSettings, let peer, case let .user(user) = peer, user.botInfo == nil {
+            AyuStreamerMode.bind(to: self.subtitleNodeRawContainer.view, kind: .phoneAndUsername, store: self.context.account.network.ayuPreferences, contentKey: subtitleStringText, contentView: self.subtitleNodeContainer.view)
+        } else {
+            AyuStreamerMode.unbind(from: self.subtitleNodeRawContainer.view)
+        }
         return resolvedHeight
     }
     

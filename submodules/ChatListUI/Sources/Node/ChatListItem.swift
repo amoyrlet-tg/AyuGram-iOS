@@ -4756,11 +4756,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let contentDelta = CGPoint(x: contentRect.origin.x - (strongSelf.titleNode.frame.minX - titleOffset), y: contentRect.origin.y - (strongSelf.titleNode.frame.minY - UIScreenPixel))
                     let titleFrame = CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: contentRect.origin.y + UIScreenPixel), size: titleLayout.size)
                     strongSelf.titleNode.frame = titleFrame
-                    AyuStreamerMode.bind(to: strongSelf.titleNode.view, kind: .name, store: item.context.account.network.ayuPreferences)
                     
                     let authorNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 2.0), size: authorLayout)
                     strongSelf.authorNode.frame = authorNodeFrame
-                    AyuStreamerMode.bind(to: strongSelf.authorNode.view, kind: .name, store: item.context.account.network.ayuPreferences)
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 2.0 + (authorLayout.height.isZero ? 0.0 : (authorLayout.height - 3.0))), size: textLayout.size)
                     
                     if let topForumTopicRect, !isSearching {

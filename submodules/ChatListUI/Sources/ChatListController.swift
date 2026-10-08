@@ -3996,9 +3996,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.filterDisposable.set((combineLatest(queue: .mainQueue(),
             filterItems,
             self.context.account.postbox.peerView(id: self.context.account.peerId),
-            self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false))
+            self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false)),
+            self.context.account.network.ayuPreferences.signal |> map { $0.foldersAtBottom } |> distinctUntilChanged
         )
-        |> deliverOnMainQueue).startStrict(next: { [weak self] countAndFilterItems, peerView, limits in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] countAndFilterItems, peerView, limits, _ in
             guard let strongSelf = self else {
                 return
             }

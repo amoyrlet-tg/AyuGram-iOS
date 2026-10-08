@@ -351,6 +351,7 @@ extension ChatControllerImpl {
                     self.presentTagPremiumPaywall()
                 }
                 
+                var retainedReactions: [MessageReaction.Reaction]?
                 controller.reactionSelected = { [weak self, weak controller] chosenUpdatedReaction, isLarge in
                     guard let self else {
                         return
@@ -502,7 +503,8 @@ extension ChatControllerImpl {
                         let chosenReaction: MessageReaction.Reaction = chosenUpdatedReaction.reaction
                         
                         let currentReactions = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: self.context.account.peerId))?.reactions ?? []
-                        var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
+                        let keepPicker = self.context.account.network.ayuPreferences.current.keepReactionPickerOpen && controller?.selectedReactionFromExpandedPicker == true
+                        var updatedReactions: [MessageReaction.Reaction] = retainedReactions ?? currentReactions.filter(\.isSelected).map(\.value)
                         var removedReaction: MessageReaction.Reaction?
                         var isFirst = false
                         
@@ -547,6 +549,7 @@ extension ChatControllerImpl {
                         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                                 if item.message.id == message.id {
+                                    if keepPicker { return }
                                     if removedReaction == nil && !updatedReactions.isEmpty {
                                         itemNode.awaitingAppliedReaction = (chosenReaction, { [weak self, weak itemNode] in
                                             guard let self, let controller = controller else {
@@ -608,6 +611,10 @@ extension ChatControllerImpl {
                             }
                         }
                         
+                        if keepPicker {
+                            retainedReactions = updatedReactions
+                            controller?.updateReactionSelection?(Set(updatedReactions.map(AnyHashable.init)))
+                        }
                         let mappedUpdatedReactions = updatedReactions.map { reaction -> UpdateMessageReaction in
                             switch reaction {
                             case let .builtin(value):

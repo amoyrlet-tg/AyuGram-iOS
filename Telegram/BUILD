@@ -317,6 +317,7 @@ filegroup(
 )
 
 alternate_icon_folders = [
+    "AyuGram",
     "BlackIcon",
     "BlackClassicIcon",
     "BlackFilledIcon",

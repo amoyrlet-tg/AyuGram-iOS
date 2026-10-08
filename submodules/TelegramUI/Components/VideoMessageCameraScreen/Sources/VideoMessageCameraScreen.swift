@@ -949,8 +949,8 @@ public class VideoMessageCameraScreen: ViewController {
             self.previewContainerContentView.clipsToBounds = true
             self.previewContainerView.addSubview(self.previewContainerContentView)
                         
-            let isDualCameraEnabled = Camera.isDualCameraSupported(forRoundVideo: true)
-            let isFrontPosition = "".isEmpty
+            let isDualCameraEnabled = controller.initialFrontCamera == nil && Camera.isDualCameraSupported(forRoundVideo: true)
+            let isFrontPosition = controller.initialFrontCamera ?? true
             
             self.mainPreviewView = CameraSimplePreviewView(frame: .zero, main: true, roundVideo: true)
             self.additionalPreviewView = CameraSimplePreviewView(frame: .zero, main: false, roundVideo: true)
@@ -1789,6 +1789,7 @@ public class VideoMessageCameraScreen: ViewController {
     }
     
     fileprivate weak var chatNode: ASDisplayNode?
+    fileprivate let initialFrontCamera: Bool?
     
     public init(
         context: AccountContext,
@@ -1797,6 +1798,7 @@ public class VideoMessageCameraScreen: ViewController {
         viewOnceAvailable: Bool,
         inputPanelFrame: (CGRect, Bool),
         chatNode: ASDisplayNode?,
+        initialFrontCamera: Bool? = nil,
         completion: @escaping (EnqueueMessage?, Bool?, Int32?, Int32?) -> Void
     ) {
         self.context = context
@@ -1805,6 +1807,7 @@ public class VideoMessageCameraScreen: ViewController {
         self.viewOnceAvailable = viewOnceAvailable
         self.inputPanelFrame = inputPanelFrame
         self.chatNode = chatNode
+        self.initialFrontCamera = initialFrontCamera
         self.completion = completion
         
         self.recordingStatus = RecordingStatus(micLevel: self.micLevelValue.get(), duration: self.durationValue.get())

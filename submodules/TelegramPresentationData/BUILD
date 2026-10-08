@@ -10,6 +10,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/Postbox:Postbox",
         "//submodules/Display:Display",

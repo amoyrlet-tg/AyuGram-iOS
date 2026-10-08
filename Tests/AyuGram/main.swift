@@ -74,6 +74,21 @@ toggles.setGhostOption(\.dontReadStories, enabled: false)
 check(!toggles.suppressStories, "Turning Read stories on must allow story reads again")
 let togglesRestored = try JSONDecoder().decode(AyuPreferences.self, from: JSONEncoder().encode(toggles))
 check(togglesRestored == toggles, "Changed switches must survive restart")
+var appearance = AyuPreferences()
+appearance.hideContactsTab = true
+appearance.hideCallsTab = true
+appearance.hideTabLabels = true
+appearance.compactTabBar = false
+appearance.keepReactionPickerOpen = true
+appearance.foldersAtBottom = true
+appearance.autoDeleteInPrivateChats = true
+let restoredAppearance = try JSONDecoder().decode(AyuPreferences.self, from: JSONEncoder().encode(appearance))
+check(restoredAppearance == appearance, "Bottom bar and reaction settings must survive restart")
+let legacyPreferences = try JSONDecoder().decode(AyuPreferences.self, from: Data("{}".utf8))
+check(!legacyPreferences.hideContactsTab && !legacyPreferences.hideCallsTab && !legacyPreferences.hideTabLabels, "Existing users must keep navigation tabs until they choose to hide them")
+check(!legacyPreferences.keepReactionPickerOpen, "Persistent reactions must be opt-in")
+check(!legacyPreferences.foldersAtBottom, "Moving folders must be opt-in")
+check(!legacyPreferences.autoDeleteInPrivateChats, "Auto-delete must default to groups only")
 let activity = AyuActivityCounter()
 check(activity.isIdle, "Presence must start idle")
 activity.begin()

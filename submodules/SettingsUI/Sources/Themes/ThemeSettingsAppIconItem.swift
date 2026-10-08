@@ -376,6 +376,8 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                             var name = "Icon"
                             var bordered = true
                             switch icon.name {
+                                case "AyuGram":
+                                    name = "AyuGram"
                                 case "BlueIcon":
                                     name = item.strings.Appearance_AppIconDefault
                                 case "BlackIcon":
@@ -428,4 +430,3 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }
-

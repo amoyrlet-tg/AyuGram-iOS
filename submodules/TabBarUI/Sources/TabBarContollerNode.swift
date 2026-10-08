@@ -9,6 +9,9 @@ import TabBarComponent
 import GlassControls
 
 final class TabBarControllerNode: ASDisplayNode {
+    var ayuCompact = false { didSet { if oldValue != self.ayuCompact { self.requestUpdate() } } }
+    var ayuFoldersAtBottom = false { didSet { if oldValue != self.ayuFoldersAtBottom { self.requestUpdate() } } }
+    var ayuHideLabels = false { didSet { if oldValue != self.ayuHideLabels { self.requestUpdate() } } }
     private struct Params: Equatable {
         let layout: ContainerViewLayout
         let toolbar: Toolbar?
@@ -283,7 +286,10 @@ final class TabBarControllerNode: ASDisplayNode {
                     )
                 },
                 selectedId: selectedId,
-                outerInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: tabBarBottomInset, right: sideInset)
+                outerInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: tabBarBottomInset, right: sideInset),
+                hideLabels: self.ayuHideLabels,
+                compactWidth: self.ayuCompact,
+                minimumContentWidth: self.ayuFoldersAtBottom ? 280.0 : 0.0
             )),
             environment: {},
             containerSize: CGSize(width: params.layout.size.width - sideInset * 2.0, height: 100.0)

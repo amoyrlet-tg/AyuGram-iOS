@@ -33,6 +33,7 @@ final class AyuAutoDeleteQueue {
 
     func schedule(id: MessageId, preferences: AyuPreferences) {
         guard preferences.autoDeleteMessages, id.namespace == Namespaces.Message.Cloud, id.peerId.namespace != Namespaces.Peer.SecretChat else { return }
+        guard id.peerId.namespace != Namespaces.Peer.CloudUser || preferences.autoDeleteInPrivateChats else { return }
         Self.lock.lock()
         defer { Self.lock.unlock() }
         var entries = self.read()
@@ -65,7 +66,15 @@ func managedAyuAutoDelete(postbox: Postbox, network: Network, stateManager: Acco
             let ids = jobs.due()
             guard !ids.isEmpty else { return }
             disposable.set((postbox.transaction { transaction -> Void in
-                deleteMessagesInteractively(transaction: transaction, stateManager: stateManager, postbox: postbox, messageIds: ids, type: .forEveryone, deleteAllInGroup: false, removeIfPossiblyDelivered: false)
+                let preferences = network.ayuPreferences.current
+                guard preferences.autoDeleteMessages else { return }
+                let allowedIds = ids.filter { id in
+                    guard let message = transaction.getMessage(id), !message.flags.contains(.Incoming) else { return false }
+                    if transaction.getPeer(id.peerId) is TelegramGroup { return true }
+                    if let channel = transaction.getPeer(id.peerId) as? TelegramChannel, case .group = channel.info { return true }
+                    return id.peerId.namespace == Namespaces.Peer.CloudUser && preferences.autoDeleteInPrivateChats
+                }
+                deleteMessagesInteractively(transaction: transaction, stateManager: stateManager, postbox: postbox, messageIds: allowedIds, type: .forEveryone, deleteAllInGroup: false, removeIfPossiblyDelivered: false)
             }).start(completed: { jobs.remove(Set(ids)) }))
         }
         let timer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: tick, queue: queue)

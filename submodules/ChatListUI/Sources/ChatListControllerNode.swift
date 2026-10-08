@@ -1143,6 +1143,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?
     let navigationBarView = ComponentView<Empty>()
+    private let ayuFolderTabsView = ComponentView<Empty>()
+    private var ayuFolderTabs: AnyComponent<Empty>?
     weak var controller: ChatListControllerImpl?
     
     private var toolbar: ComponentView<Empty>?
@@ -1511,6 +1513,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             )
         }
         
+        self.ayuFolderTabs = nil
         var navigationHeaderPanels: AnyComponent<Empty>?
         if self.controller?.tabContainerData != nil || !panels.isEmpty {
             var tabs: AnyComponent<Empty>?
@@ -1650,6 +1653,12 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 ))
             }
                 
+            if self.context.account.network.ayuPreferences.current.foldersAtBottom,
+               self.location == .chatList(groupId: .root), !self.isSearchDisplayControllerActive,
+               self.toolbarData == nil, !self.isReorderingFilters {
+                self.ayuFolderTabs = tabs
+                tabs = nil
+            }
             navigationHeaderPanels = AnyComponent(HeaderPanelContainerComponent(
                 theme: self.presentationData.theme,
                 tabs: tabs,
@@ -1848,6 +1857,25 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         insets.top += navigationBarHeight
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
+
+        if let tabs = self.ayuFolderTabs {
+            // Match the minimum width of the navigation capsule, excluding its
+            // separate search button. More navigation buttons may widen it.
+            let width = min(280.0, max(0.0, layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 40.0 - 72.0))
+            let size = self.ayuFolderTabsView.update(transition: ComponentTransition(transition), component: tabs, environment: {}, containerSize: CGSize(width: width, height: 44.0))
+            if let view = self.ayuFolderTabsView.view {
+                if view.superview == nil { self.view.addSubview(view) }
+                view.backgroundColor = self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor
+                view.layer.cornerRadius = min(22.0, size.height * 0.5)
+                view.clipsToBounds = true
+                view.isHidden = false
+                self.view.bringSubviewToFront(view)
+                transition.updateFrame(view: view, frame: CGRect(x: floor((layout.size.width - width) * 0.5), y: layout.size.height - insets.bottom - size.height - 8.0, width: width, height: size.height))
+            }
+            insets.bottom += size.height + 16.0
+        } else {
+            self.ayuFolderTabsView.view?.isHidden = true
+        }
         
         if let toolbarData = self.toolbarData {
             var panelsBottomInset: CGFloat = layout.insets(options: []).bottom

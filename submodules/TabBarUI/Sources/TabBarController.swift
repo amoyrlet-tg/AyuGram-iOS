@@ -85,6 +85,13 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     }
     
     public var currentController: ViewController?
+
+    public func updateAyuAppearance(compact: Bool, hideLabels: Bool, foldersAtBottom: Bool) {
+        self.tabBarControllerNode.ayuFoldersAtBottom = foldersAtBottom
+        self.tabBarControllerNode.ayuCompact = compact
+        self.tabBarControllerNode.ayuHideLabels = hideLabels
+        self.updateLayout()
+    }
     
     override public var transitionNavigationBar: NavigationBar? {
         return self.currentController?.navigationBar

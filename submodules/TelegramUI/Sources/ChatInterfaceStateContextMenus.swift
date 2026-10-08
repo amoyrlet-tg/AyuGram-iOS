@@ -964,12 +964,33 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
 
         var actions: [ContextMenuItem] = []
         if message.id.namespace == Namespaces.Message.Cloud {
-            actions.append(.action(ContextMenuActionItem(text: "History", icon: { theme in
+            var ayuActions: [ContextMenuItem] = []
+            ayuActions.append(.action(ContextMenuActionItem(text: context.sharedContext.currentPresentationData.with { $0 }.strings.Common_Back, icon: { theme in
+                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { controller, _ in controller?.popItems() })))
+            ayuActions.append(.separator)
+            ayuActions.append(.action(ContextMenuActionItem(text: "History", icon: { theme in
                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
             }, action: { controller, _ in
                 controller?.dismiss(completion: {
-                    controllerInteraction.navigationController()?.pushViewController(ayuMessageHistoryController(context: context, message: message))
+                    let _ = (context.account.postbox.transaction { transaction in
+                        transaction.getMessageGroup(message.id) ?? [message]
+                    } |> deliverOnMainQueue).startStandalone(next: { group in
+                        controllerInteraction.navigationController()?.pushViewController(ayuMessageHistoryController(context: context, messages: group))
+                    })
                 })
+            })))
+            ayuActions.append(.action(ContextMenuActionItem(text: "View JSON", icon: { theme in
+                UIImage(systemName: "curlybraces")?.withTintColor(theme.contextMenu.primaryColor, renderingMode: .alwaysOriginal)
+            }, action: { controller, _ in
+                controller?.dismiss(completion: {
+                    controllerInteraction.navigationController()?.pushViewController(ayuMessageJSONController(context: context, message: message))
+                })
+            })))
+            actions.append(.action(ContextMenuActionItem(text: "AyuGram", icon: { theme in
+                ayuPreferencesIcon(color: theme.contextMenu.primaryColor)
+            }, action: { controller, _ in
+                controller?.pushItems(items: .single(ContextController.Items(content: .list(ayuActions))))
             })))
         }
 

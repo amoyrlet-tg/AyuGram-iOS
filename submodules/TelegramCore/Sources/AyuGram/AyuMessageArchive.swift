@@ -21,6 +21,7 @@ public struct AyuMessageRevision: Codable {
     public let payload: Data
     public let senderId: Int64?
     public let mediaSummary: String?
+    public let groupingKey: Int64?
 
     public var id: MessageId {
         MessageId(peerId: PeerId(self.peerId), namespace: self.namespace, id: self.messageId)
@@ -75,7 +76,7 @@ public final class AyuMessageArchive {
             media.encode(encoder)
         })
         let mediaSummary = message.media.isEmpty ? nil : message.media.map { String(describing: type(of: $0)) }.joined(separator: ", ")
-        let revision = AyuMessageRevision(peerId: message.id.peerId.toInt64(), namespace: message.id.namespace, messageId: message.id.id, timestamp: message.timestamp, capturedAt: Int32(Date().timeIntervalSince1970), deleted: deleted, text: message.text, payload: encoder.makeData(), senderId: message.author?.id.toInt64(), mediaSummary: mediaSummary)
+        let revision = AyuMessageRevision(peerId: message.id.peerId.toInt64(), namespace: message.id.namespace, messageId: message.id.id, timestamp: message.timestamp, capturedAt: Int32(Date().timeIntervalSince1970), deleted: deleted, text: message.text, payload: encoder.makeData(), senderId: message.author?.id.toInt64(), mediaSummary: mediaSummary, groupingKey: message.groupingKey)
         var revisions = self.load(message.id)
         if let last = revisions.last, last.text == revision.text && last.payload == revision.payload && last.deleted == deleted { return true }
         revisions.append(revision)

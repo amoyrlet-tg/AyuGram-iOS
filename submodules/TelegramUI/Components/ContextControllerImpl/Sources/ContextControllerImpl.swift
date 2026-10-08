@@ -1901,6 +1901,8 @@ public final class ContextControllerImpl: ViewController, ContextController, Sta
     private var shouldBeDismissedDisposable: Disposable?
     
     public var reactionSelected: ((UpdateMessageReaction, Bool) -> Void)?
+    public var selectedReactionFromExpandedPicker = false
+    public var updateReactionSelection: ((Set<AnyHashable>) -> Void)?
     public var premiumReactionsSelected: (() -> Void)?
     
     public var getOverlayViews: (() -> [UIView])?

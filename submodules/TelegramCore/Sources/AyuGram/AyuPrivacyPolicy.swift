@@ -17,9 +17,16 @@ public struct AyuPreferences: Codable, Equatable {
     public var hidePhoneNumbers = true
     public var showTimestampSeconds = true
     public var autoDeleteMessages = false
+    public var autoDeleteInPrivateChats = false
     public var autoDeleteDelay: Int32 = 180
     public var showNumericId = true
     public var showDcId = true
+    public var keepReactionPickerOpen = false
+    public var hideContactsTab = false
+    public var hideCallsTab = false
+    public var hideTabLabels = false
+    public var compactTabBar = true
+    public var foldersAtBottom = false
 
     public var sendActivityStatuses: Bool {
         get { !self.dontSendActivity }
@@ -60,7 +67,9 @@ public struct AyuPreferences: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case ghostMode, dontReadMessages, dontReadStories, dontSendActivity, dontSendOnline, autoOffline
         case saveDeletedMessages, saveEditHistory, archiveMedia, streamerMode, hideNames, hideUsernames, hidePhoneNumbers, showTimestampSeconds
-        case autoDeleteMessages, autoDeleteDelay, showNumericId, showDcId
+        case autoDeleteMessages, autoDeleteInPrivateChats, autoDeleteDelay, showNumericId, showDcId
+        case keepReactionPickerOpen, hideContactsTab, hideCallsTab, hideTabLabels, compactTabBar
+        case foldersAtBottom
     }
 
     public init() {}
@@ -83,9 +92,16 @@ public struct AyuPreferences: Codable, Equatable {
         self.hidePhoneNumbers = try values.decodeIfPresent(Bool.self, forKey: .hidePhoneNumbers) ?? self.hidePhoneNumbers
         self.showTimestampSeconds = try values.decodeIfPresent(Bool.self, forKey: .showTimestampSeconds) ?? self.showTimestampSeconds
         self.autoDeleteMessages = try values.decodeIfPresent(Bool.self, forKey: .autoDeleteMessages) ?? self.autoDeleteMessages
+        self.autoDeleteInPrivateChats = try values.decodeIfPresent(Bool.self, forKey: .autoDeleteInPrivateChats) ?? self.autoDeleteInPrivateChats
         self.autoDeleteDelay = try values.decodeIfPresent(Int32.self, forKey: .autoDeleteDelay) ?? self.autoDeleteDelay
         self.showNumericId = try values.decodeIfPresent(Bool.self, forKey: .showNumericId) ?? self.showNumericId
         self.showDcId = try values.decodeIfPresent(Bool.self, forKey: .showDcId) ?? self.showDcId
+        self.keepReactionPickerOpen = try values.decodeIfPresent(Bool.self, forKey: .keepReactionPickerOpen) ?? self.keepReactionPickerOpen
+        self.hideContactsTab = try values.decodeIfPresent(Bool.self, forKey: .hideContactsTab) ?? self.hideContactsTab
+        self.hideCallsTab = try values.decodeIfPresent(Bool.self, forKey: .hideCallsTab) ?? self.hideCallsTab
+        self.hideTabLabels = try values.decodeIfPresent(Bool.self, forKey: .hideTabLabels) ?? self.hideTabLabels
+        self.compactTabBar = try values.decodeIfPresent(Bool.self, forKey: .compactTabBar) ?? self.compactTabBar
+        self.foldersAtBottom = try values.decodeIfPresent(Bool.self, forKey: .foldersAtBottom) ?? self.foldersAtBottom
     }
 }
 

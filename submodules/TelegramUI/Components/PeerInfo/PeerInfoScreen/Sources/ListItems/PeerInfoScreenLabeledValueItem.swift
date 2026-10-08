@@ -312,6 +312,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             guard let self else {
                 return false
             }
+            if AyuStreamerMode.isConcealed(self.textNode.view) || AyuStreamerMode.isConcealed(self.additionalTextNode.view) { return false }
             
             if self.linkItemAtPoint(point) != nil {
                 return false
@@ -371,6 +372,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return .keepWithSingleTap
             }
+            if AyuStreamerMode.isConcealed(strongSelf.textNode.view) || AyuStreamerMode.isConcealed(strongSelf.additionalTextNode.view) { return .fail }
             if !strongSelf.iconButtonNode.isHidden, strongSelf.iconButtonNode.view.hitTest(strongSelf.view.convert(point, to: strongSelf.iconButtonNode.view), with: nil) != nil {
                 return .fail
             }
@@ -871,8 +873,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         }
         
         if let kind = item.ayuIdentityKind {
-            AyuStreamerMode.bind(to: self.textNode.view, kind: kind, store: context.account.network.ayuPreferences)
-            AyuStreamerMode.bind(to: self.additionalTextNode.view, kind: kind, store: context.account.network.ayuPreferences)
+            AyuStreamerMode.bind(to: self.textNode.view, kind: kind, store: context.account.network.ayuPreferences, contentKey: item.text)
+            AyuStreamerMode.bind(to: self.additionalTextNode.view, kind: kind, store: context.account.network.ayuPreferences, contentKey: item.additionalText ?? "")
         } else {
             AyuStreamerMode.unbind(from: self.textNode.view)
             AyuStreamerMode.unbind(from: self.additionalTextNode.view)

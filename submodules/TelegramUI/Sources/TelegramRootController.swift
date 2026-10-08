@@ -72,6 +72,8 @@ private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceh
 
 public final class TelegramRootController: NavigationController, TelegramRootControllerInterface {
     private let context: AccountContext
+    private var ayuPreferencesDisposable: Disposable?
+    private var ayuShowCallsTab = true
     
     public var rootTabController: TabBarController?
     
@@ -142,6 +144,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     deinit {
+        self.ayuPreferencesDisposable?.dispose()
         self.permissionsDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
         self.applicationInFocusDisposable?.dispose()
@@ -199,6 +202,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     public func addRootControllers(showCallsTab: Bool) {
+        self.ayuShowCallsTab = showCallsTab
         let tabBarController = TabBarControllerImpl(theme: self.presentationData.theme, strings: self.presentationData.strings)
         tabBarController.navigationPresentation = .master
         let chatListController = self.context.sharedContext.makeChatListController(context: self.context, location: .chatList(groupId: .root), controlsHistoryPreload: true, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
@@ -247,21 +251,35 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
+        self.ayuPreferencesDisposable?.dispose()
+        self.ayuPreferencesDisposable = (self.context.account.network.ayuPreferences.signal
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let self else { return }
+            self.updateRootControllers(showCallsTab: self.ayuShowCallsTab)
+        })
     }
         
     public func updateRootControllers(showCallsTab: Bool) {
+        self.ayuShowCallsTab = showCallsTab
         guard let rootTabController = self.rootTabController as? TabBarControllerImpl else {
             return
         }
         var controllers: [ViewController] = []
-        controllers.append(self.contactsController!)
-        if showCallsTab {
+        let preferences = self.context.account.network.ayuPreferences.current
+        let selected = rootTabController.currentController
+        if !preferences.hideContactsTab { controllers.append(self.contactsController!) }
+        if showCallsTab && !preferences.hideCallsTab {
             controllers.append(self.callListController!)
         }
         controllers.append(self.chatListController!)
         controllers.append(self.accountSettingsController!)
         
-        rootTabController.setControllers(controllers, selectedIndex: nil)
+        let selectedIndex = selected.flatMap { selected in controllers.firstIndex(where: { $0 === selected }) }
+            ?? controllers.firstIndex(where: { $0 === self.chatListController }) ?? 0
+        if !rootTabController.controllers.elementsEqual(controllers, by: { $0 === $1 }) {
+            rootTabController.setControllers(controllers, selectedIndex: selectedIndex)
+        }
+        rootTabController.updateAyuAppearance(compact: preferences.compactTabBar, hideLabels: preferences.hideTabLabels, foldersAtBottom: preferences.foldersAtBottom)
     }
     
     public func openChatsController(activateSearch: Bool, filter: ChatListSearchFilter = .chats, query: String? = nil) {

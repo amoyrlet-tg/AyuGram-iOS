@@ -354,6 +354,9 @@ public final class TabBarComponent: Component {
     public let search: Search?
     public let selectedId: AnyHashable?
     public let outerInsets: UIEdgeInsets
+    public let hideLabels: Bool
+    public let compactWidth: Bool
+    public let minimumContentWidth: CGFloat
     
     public init(
         theme: PresentationTheme,
@@ -363,7 +366,10 @@ public final class TabBarComponent: Component {
         items: [Item],
         search: Search?,
         selectedId: AnyHashable?,
-        outerInsets: UIEdgeInsets
+        outerInsets: UIEdgeInsets,
+        hideLabels: Bool = false,
+        compactWidth: Bool = false,
+        minimumContentWidth: CGFloat = 0.0
     ) {
         self.theme = theme
         self.tintSelectedItem = tintSelectedItem
@@ -373,9 +379,13 @@ public final class TabBarComponent: Component {
         self.search = search
         self.selectedId = selectedId
         self.outerInsets = outerInsets
+        self.hideLabels = hideLabels
+        self.compactWidth = compactWidth
+        self.minimumContentWidth = minimumContentWidth
     }
     
     public static func ==(lhs: TabBarComponent, rhs: TabBarComponent) -> Bool {
+        if lhs.hideLabels != rhs.hideLabels || lhs.compactWidth != rhs.compactWidth || lhs.minimumContentWidth != rhs.minimumContentWidth { return false }
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -653,7 +663,9 @@ public final class TabBarComponent: Component {
             let _ = alphaTransition
 
             let innerInset: CGFloat = 4.0
-            let availableSize = CGSize(width: min(500.0, availableSize.width), height: availableSize.height)
+            let compactWidth = max(component.minimumContentWidth, CGFloat(component.items.count) * (component.hideLabels ? 68.0 : 88.0) + 8.0) + (component.search == nil ? 0.0 : 72.0)
+            let maximumWidth = component.compactWidth && component.search?.isActive != true ? min(500.0, compactWidth) : 500.0
+            let availableSize = CGSize(width: min(maximumWidth, availableSize.width), height: availableSize.height)
             
             let previousComponent = self.component
             self.component = component
@@ -690,6 +702,7 @@ public final class TabBarComponent: Component {
                         item: item,
                         theme: component.theme,
                         isCompact: false,
+                        hideLabel: component.hideLabels,
                         isSelected: false,
                         tintSelectedItem: true,
                         isUnconstrained: true
@@ -767,6 +780,7 @@ public final class TabBarComponent: Component {
                         item: item,
                         theme: component.theme,
                         isCompact: component.search?.isActive == true,
+                        hideLabel: component.hideLabels,
                         isSelected: false,
                         tintSelectedItem: component.tintSelectedItem,
                         isUnconstrained: false
@@ -780,6 +794,7 @@ public final class TabBarComponent: Component {
                         item: item,
                         theme: component.theme,
                         isCompact: component.search?.isActive == true,
+                        hideLabel: component.hideLabels,
                         isSelected: true,
                         tintSelectedItem: component.tintSelectedItem,
                         isUnconstrained: false
@@ -959,20 +974,23 @@ private final class ItemComponent: Component {
     let item: TabBarComponent.Item
     let theme: PresentationTheme
     let isCompact: Bool
+    let hideLabel: Bool
     let isSelected: Bool
     let tintSelectedItem: Bool
     let isUnconstrained: Bool
     
-    init(item: TabBarComponent.Item, theme: PresentationTheme, isCompact: Bool, isSelected: Bool, tintSelectedItem: Bool, isUnconstrained: Bool) {
+    init(item: TabBarComponent.Item, theme: PresentationTheme, isCompact: Bool, hideLabel: Bool, isSelected: Bool, tintSelectedItem: Bool, isUnconstrained: Bool) {
         self.item = item
         self.theme = theme
         self.isCompact = isCompact
+        self.hideLabel = hideLabel
         self.isSelected = isSelected
         self.tintSelectedItem = tintSelectedItem
         self.isUnconstrained = isUnconstrained
     }
     
     static func ==(lhs: ItemComponent, rhs: ItemComponent) -> Bool {
+        if lhs.hideLabel != rhs.hideLabel { return false }
         if lhs.item != rhs.item {
             return false
         }
@@ -1141,7 +1159,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 48.0, height: 48.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: -4.0), size: iconSize).offsetBy(dx: tabBarItem.animationOffset.x, dy: tabBarItem.animationOffset.y)
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: component.hideLabel ? floor((availableSize.height - iconSize.height) * 0.5) : -4.0), size: iconSize).offsetBy(dx: tabBarItem.animationOffset.x, dy: tabBarItem.animationOffset.y)
                     if let animationIconView = animationIcon.view {
                         if animationIconView.superview == nil {
                             if let badgeView = self.badge?.view {
@@ -1178,7 +1196,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 100.0, height: 100.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: 3.0), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: component.hideLabel ? floor((availableSize.height - iconSize.height) * 0.5) : 3.0), size: iconSize)
                     if let imageIconView = imageIcon.view {
                         if imageIconView.superview == nil {
                             if let badgeView = self.badge?.view {
@@ -1226,7 +1244,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 48.0, height: 48.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: -4.0), size: iconSize).offsetBy(dx: offset.x, dy: offset.y)
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: component.hideLabel ? floor((availableSize.height - iconSize.height) * 0.5) : -4.0), size: iconSize).offsetBy(dx: offset.x, dy: offset.y)
                     if let animationIconView = animationIcon.view {
                         if animationIconView.superview == nil {
                             if let badgeView = self.badge?.view {
@@ -1262,7 +1280,7 @@ private final class ItemComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: 100.0, height: 100.0)
                     )
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: 8.0), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: component.hideLabel ? floor((availableSize.height - iconSize.height) * 0.5) : 8.0), size: iconSize)
                     if let imageIconView = imageIcon.view {
                         if imageIconView.superview == nil {
                             if let badgeView = self.badge?.view {
@@ -1290,7 +1308,7 @@ private final class ItemComponent: Component {
                     self.contextContainerView.contentView.addSubview(titleView)
                 }
                 titleView.frame = titleFrame
-                alphaTransition.setAlpha(view: titleView, alpha: component.isCompact ? 0.0 : 1.0)
+                alphaTransition.setAlpha(view: titleView, alpha: component.isCompact || component.hideLabel ? 0.0 : 1.0)
             }
 
             if let badgeText = badgeValue, !badgeText.isEmpty {
@@ -1334,7 +1352,7 @@ private final class ItemComponent: Component {
             self.contextContainerView.contentRect = CGRect(origin: CGPoint(), size: availableSize)
 
             if component.isUnconstrained {
-                return CGSize(width: titleSize.width + 10.0 * 2.0, height: availableSize.height)
+                return CGSize(width: component.hideLabel ? 56.0 : titleSize.width + 10.0 * 2.0, height: availableSize.height)
             } else {
                 return availableSize
             }

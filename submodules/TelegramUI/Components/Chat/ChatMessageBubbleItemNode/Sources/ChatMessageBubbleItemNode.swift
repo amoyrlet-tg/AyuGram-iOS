@@ -4175,8 +4175,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 animation.animator.updateFrame(layer: nameNode.layer, frame: nameNodeFrame, completion: nil)
             }
             
-            AyuStreamerMode.bind(to: nameNode.view, kind: .name, store: item.context.account.network.ayuPreferences)
-
             let nameButtonNode: HighlightTrackingButtonNode
             let nameHighlightNode: ASImageNode
             if let currentButton = strongSelf.nameButtonNode, let currentHighlight = strongSelf.nameHighlightNode {

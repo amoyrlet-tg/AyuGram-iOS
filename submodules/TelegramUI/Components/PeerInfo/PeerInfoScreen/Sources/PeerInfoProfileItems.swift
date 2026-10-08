@@ -73,7 +73,12 @@ func infoItems(
             }
         }
         if !identifiers.isEmpty {
-            items[.peerInfoTrailing]!.append(PeerInfoScreenDisclosureItem(id: 90001, text: identifiers.joined(separator: " · "), ayuIdentityKind: .username, hasArrow: false, action: nil))
+            items[.peerInfoTrailing]!.append(PeerInfoScreenDisclosureItem(id: 90001, text: identifiers.joined(separator: " · "), hasArrow: false, action: nil, longPressAction: {
+                if let id = ayuBotAPIId(peer.id) {
+                    UIPasteboard.general.string = String(id)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+            }))
         }
     }
 
@@ -181,7 +186,7 @@ func infoItems(
             } else {
                 label = presentationData.strings.ContactInfo_PhoneLabelMobile
             }
-            items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemPhoneNumber, label: label, ayuIdentityKind: .phone, text: formattedPhone, textColor: .accent, action: { node, progress in
+            items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemPhoneNumber, label: label, ayuIdentityKind: user.botInfo == nil ? .phone : nil, text: formattedPhone, textColor: .accent, action: { node, progress in
                 interaction.openPhone(phone, node, nil, progress)
             }, longTapAction: nil, contextAction: { node, gesture, _ in
                 interaction.openPhone(phone, node, gesture, nil)
@@ -200,7 +205,7 @@ func infoItems(
                 PeerInfoScreenLabeledValueItem(
                     id: ItemUsername,
                     label: presentationData.strings.Profile_Username,
-                    ayuIdentityKind: .username,
+                    ayuIdentityKind: user.botInfo == nil ? .username : nil,
                     text: "@\(mainUsername)",
                     additionalText: additionalUsernames,
                     textColor: .accent,
@@ -594,7 +599,6 @@ func infoItems(
                 PeerInfoScreenLabeledValueItem(
                     id: ItemUsername,
                     label: presentationData.strings.Channel_LinkItem,
-                    ayuIdentityKind: .username,
                     text: linkText,
                     textColor: .accent,
                     icon: .qrCode,
@@ -647,7 +651,6 @@ func infoItems(
                     PeerInfoScreenLabeledValueItem(
                         id: ItemUsername,
                         label: presentationData.strings.Channel_LinkItem,
-                        ayuIdentityKind: .username,
                         text: "https://t.me/\(mainUsername)",
                         additionalText: additionalUsernames,
                         textColor: .accent,

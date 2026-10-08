@@ -111,7 +111,6 @@ public func ayuPreferencesController(context: AccountContext) -> ViewController 
         let rows: [(Int32, Int32, String, WritableKeyPath<AyuPreferences, Bool>)] = [
             (0, 0, "Ghost Mode · \(ayuGhostOptions.filter { preferences.ghostMode || preferences[keyPath: $0.1] }.count)/5", \.ghostMode),
             (7, 2, "Streamer Mode", \.streamerMode),
-            (8, 2, "Hide names", \.hideNames),
             (9, 2, "Hide usernames", \.hideUsernames),
             (15, 2, "Hide phone numbers", \.hidePhoneNumbers),
             (16, 3, "Save deleted messages", \.saveDeletedMessages),
@@ -119,8 +118,15 @@ public func ayuPreferencesController(context: AccountContext) -> ViewController 
             (18, 3, "Automatically archive media", \.archiveMedia),
             (19, 4, "Show seconds in timestamps", \.showTimestampSeconds),
             (20, 5, "Auto-delete my messages", \.autoDeleteMessages),
+            (29, 5, "Also in private chats", \.autoDeleteInPrivateChats),
             (21, 6, "Show numeric ID", \.showNumericId),
-            (22, 6, "Show datacenter", \.showDcId)
+            (22, 6, "Show datacenter", \.showDcId),
+            (24, 8, "Keep expanded reactions open", \.keepReactionPickerOpen),
+            (25, 9, "Hide Contacts tab", \.hideContactsTab),
+            (26, 9, "Hide Calls tab", \.hideCallsTab),
+            (27, 9, "Hide tab labels", \.hideTabLabels),
+            (28, 9, "Compact bottom bar", \.compactTabBar),
+            (30, 9, "Folders above bottom bar", \.foldersAtBottom)
         ]
         var entries = rows.map { id, section, title, keyPath in
             var entry = AyuPreferenceEntry(stableId: id, section: section, title: title, value: preferences[keyPath: keyPath], theme: presentationData.theme, keyPath: keyPath)

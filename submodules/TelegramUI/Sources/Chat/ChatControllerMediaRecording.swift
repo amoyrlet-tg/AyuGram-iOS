@@ -145,7 +145,29 @@ extension ChatControllerImpl {
         }
     }
     
-    func requestVideoRecorder() {
+    func requestVideoRecorder(initialFrontCamera: Bool? = nil) {
+        guard let initialFrontCamera else {
+            let sheet = ActionSheetController(presentationData: self.presentationData)
+            let choose: (Bool) -> Void = { [weak self, weak sheet] front in
+                sheet?.dismissAnimated()
+                guard let self, self.videoRecorderValue == nil, self.audioRecorderValue == nil else { return }
+                // Start locked after the camera choice, independent of the
+                // original hold gesture which opened the selector.
+                self.beginMediaRecordingRequestId += 1
+                self.lockMediaRecordingRequestId = self.beginMediaRecordingRequestId
+                self.requestVideoRecorder(initialFrontCamera: front)
+            }
+            sheet.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: "Камера для видеосообщения"),
+                    ActionSheetButtonItem(title: "Передняя камера", color: .accent, action: { choose(true) }),
+                    ActionSheetButtonItem(title: "Задняя камера", color: .accent, action: { choose(false) })
+                ]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak sheet] in sheet?.dismissAnimated() })])
+            ])
+            self.present(sheet, in: .window(.root))
+            return
+        }
         if self.videoRecorderValue == nil {
             if let currentInputPanelFrame = self.chatDisplayNode.currentInputPanelFrame() {
                 if self.recorderFeedback == nil {
@@ -180,6 +202,7 @@ extension ChatControllerImpl {
                     viewOnceAvailable: viewOnceAvailable,
                     inputPanelFrame: (currentInputPanelFrame, self.chatDisplayNode.inputNode != nil),
                     chatNode: self.chatDisplayNode.historyNode,
+                    initialFrontCamera: initialFrontCamera,
                     completion: { [weak self] message, silentPosting, scheduleTime, repeatPeriod in
                         guard let self, let videoController = self.videoRecorderValue else {
                             return

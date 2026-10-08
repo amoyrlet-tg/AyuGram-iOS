@@ -56,8 +56,9 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     let iconSignal: Signal<UIImage?, NoError>?
     let hasArrow: Bool
     let action: (() -> Void)?
+    let longPressAction: (() -> Void)?
     
-    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, ayuIdentityKind: AyuIdentityKind? = nil, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, hasArrow: Bool = true, action: (() -> Void)?) {
+    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, ayuIdentityKind: AyuIdentityKind? = nil, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, hasArrow: Bool = true, action: (() -> Void)?, longPressAction: (() -> Void)? = nil) {
         self.id = id
         self.label = label
         self.additionalBadgeLabel = additionalBadgeLabel
@@ -68,6 +69,7 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
         self.iconSignal = iconSignal
         self.hasArrow = hasArrow
         self.action = action
+        self.longPressAction = longPressAction
     }
     
     func node() -> PeerInfoScreenItemNode {
@@ -140,6 +142,11 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.textNode)
         self.addSubnode(self.arrowNode)
         self.addSubnode(self.activateArea)
+        self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.copyLongPressed(_:))))
+    }
+
+    @objc private func copyLongPressed(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .began { self.item?.longPressAction?() }
     }
     
     deinit {
